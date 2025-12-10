@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { TemplateService } from '../../services/templateService';
 import { AssetService } from '../../services/assetService';
 import { ChannelService } from '../../services/channelService';
+import { FontService } from '../../services/fontService';
 
 // --- ICONS ---
 const Icons = {
@@ -37,7 +38,8 @@ const Icons = {
   ArrowDown: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>,
   Plus: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
   Upload: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
-  RefImage: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+  RefImage: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>,
+  BgReplace: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/><line x1="16" y1="5" x2="22" y2="5"/><line x1="19" y1="2" x2="19" y2="8"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
 };
 
 // Helper to convert file to base64
@@ -97,25 +99,36 @@ export const TemplateEditor: React.FC = () => {
     const loadedChannels = ChannelService.getAll();
     setChannels(loadedChannels);
     if (loadedChannels.length > 0) setChannelId(loadedChannels[0]._id);
-
-    const all = TemplateService.getAll();
-    if (all.length > 0) setHasSaved(true);
+    
+    // Load persisted fonts
+    const savedFonts = FontService.getAll().map(f => f.name);
+    setCustomFonts(prev => [...new Set([...prev, ...savedFonts])]);
   }, []);
 
-  // Load last saved
-  const loadLastSaved = () => {
-    const all = TemplateService.getAll();
-    if (all.length > 0) {
-        const latest = all[0];
+  // AUTO LOAD Template when channel changes
+  useEffect(() => {
+    if (!channelId) return;
+
+    const templates = TemplateService.getByChannel(channelId);
+    if (templates && templates.length > 0) {
+        // Load the most recent template for this channel
+        const latest = templates[0];
         setTemplateId(latest._id);
         setTemplateName(latest.name);
-        setChannelId(latest.channelId);
         setBackgroundUrl(latest.backgroundUrl);
         setImgDimensions({ w: latest.width, h: latest.height });
         setBoxes(latest.boxes);
         setHasSaved(true);
+    } else {
+        // Reset if no template exists for this channel
+        setTemplateId(null);
+        setTemplateName('New Template');
+        // Keep backgroundURL or reset? Resetting is safer to avoid confusion
+        setBackgroundUrl(null);
+        setBoxes([]);
+        setHasSaved(false);
     }
-  };
+  }, [channelId]);
 
   useEffect(() => {
       if (selectedBoxId) {
@@ -168,6 +181,10 @@ export const TemplateEditor: React.FC = () => {
             const fontFace = new FontFace(fontName, `url("${base64}")`);
             await fontFace.load();
             document.fonts.add(fontFace);
+            
+            // Persist Font
+            FontService.saveFont(fontName, base64);
+            
             setCustomFonts(prev => [...prev, fontName]);
         } catch (err) {
             alert('Failed to load font. Check console.');
@@ -441,9 +458,6 @@ export const TemplateEditor: React.FC = () => {
                     {channels.map(c => <option key={c._id} value={c._id}>for {c.name}</option>)}
                  </select>
              </div>
-             {hasSaved && !templateId && (
-                 <button onClick={loadLastSaved} className="hidden md:flex ml-2 text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded items-center gap-1 hover:bg-blue-100"><Icons.Reload /> Load Last</button>
-             )}
         </div>
         <div className="flex items-center gap-2 md:gap-3 shrink-0">
             <button onClick={() => setShowAssetModal(true)} className="text-xs font-semibold text-gray-600 hover:text-primary flex items-center gap-1 p-2 md:p-0">
@@ -766,6 +780,14 @@ export const TemplateEditor: React.FC = () => {
                     <span className="text-[10px] font-medium">{tool.label}</span>
                 </button>
             ))}
+            
+            {/* Replace Background Button */}
+             <label className="flex flex-col items-center justify-center w-14 h-14 text-gray-600 hover:text-primary active:scale-90 transition-transform cursor-pointer">
+                <div className="p-2 bg-gray-100 rounded-xl mb-1"><Icons.BgReplace /></div>
+                <span className="text-[10px] font-medium">BG</span>
+                <input type="file" accept="image/*" onChange={handleBgUpload} className="hidden" />
+            </label>
+
              <label className="flex flex-col items-center justify-center w-14 h-14 text-gray-600 hover:text-primary active:scale-90 transition-transform cursor-pointer">
                 <div className="p-2 bg-gray-100 rounded-xl mb-1"><Icons.RefImage /></div>
                 <span className="text-[10px] font-medium">Ref Img</span>

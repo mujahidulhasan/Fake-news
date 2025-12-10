@@ -5,6 +5,7 @@ import { GlassCard } from '../components/GlassCard';
 import { renderCard } from '../utils/canvasRender';
 import { TemplateService } from '../services/templateService';
 import { AssetService } from '../services/assetService';
+import { FontService } from '../services/fontService';
 
 export const CardGenerator: React.FC = () => {
   const { channelId } = useParams();
@@ -16,6 +17,9 @@ export const CardGenerator: React.FC = () => {
 
   // Load Template and Assets
   useEffect(() => {
+    // Load Saved Fonts so user sees correct style in canvas
+    FontService.loadSavedFonts();
+    
     // Load Global Assets
     const logos = AssetService.getByType('LOGO');
     const ads = AssetService.getByType('ADS');
@@ -109,11 +113,11 @@ export const CardGenerator: React.FC = () => {
                     </label>
                     
                     {box.type === BoxType.TEXT && (
-                        <input 
-                            type="text" 
-                            className="w-full p-2 rounded bg-white/50 border border-gray-300 focus:ring-2 focus:ring-primary/50 outline-none"
+                        <textarea
+                            className="w-full p-2 rounded bg-white/50 border border-gray-300 focus:ring-2 focus:ring-primary/50 outline-none resize-y min-h-[80px]"
                             placeholder={`Enter ${box.key}`}
                             onChange={(e) => handleInputChange(box.key, e.target.value)}
+                            rows={3}
                         />
                     )}
 

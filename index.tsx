@@ -1,4 +1,4 @@
-import React, { ReactNode, Component } from 'react';
+import React, { ReactNode, Component, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { PublicLanding } from './pages/PublicLanding';
@@ -7,6 +7,7 @@ import { AdminLogin } from './pages/admin/AdminLogin';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { TemplateEditor } from './pages/admin/TemplateEditor';
 import { ChannelManager } from './pages/admin/ChannelManager';
+import { FontService } from './services/fontService';
 
 // Simple Error Boundary to catch render crashes
 interface ErrorBoundaryProps {
@@ -19,10 +20,7 @@ interface ErrorBoundaryState {
 }
 
 class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  constructor(props: ErrorBoundaryProps) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
+  public state: ErrorBoundaryState = { hasError: false, error: null };
 
   static getDerivedStateFromError(error: any) {
     return { hasError: true, error };
@@ -57,6 +55,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 };
 
 const App = () => {
+  // Load custom fonts on app boot
+  useEffect(() => {
+    FontService.loadSavedFonts();
+  }, []);
+
   return (
     <HashRouter>
       <div className="min-h-screen font-sans text-gray-900">

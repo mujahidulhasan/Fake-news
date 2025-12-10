@@ -27,14 +27,8 @@ export const PublicLanding: React.FC = () => {
                 <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold">N</div>
                 <span className="font-bold text-xl text-gray-800 tracking-tight">NewsCard<span className="text-primary">Pro</span></span>
             </div>
-            <div>
-                <Link 
-                    to="/admin/login" 
-                    className="text-sm font-medium text-gray-600 hover:text-primary transition px-4 py-2 rounded-full hover:bg-gray-100"
-                >
-                    Admin Login
-                </Link>
-            </div>
+            {/* Admin Login button removed as requested */}
+            <div></div>
         </div>
       </nav>
 

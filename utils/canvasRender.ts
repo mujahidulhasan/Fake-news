@@ -49,11 +49,11 @@ const drawBox = async (
   ctx.globalAlpha = typeof box.opacity === 'number' ? box.opacity : 1;
 
   if (box.type === BoxType.TEXT) {
-    const textValue = (formData[box.key] as string) || box.key || ''; // Use key as placeholder in editor
+    const textValue = (formData[box.key] as string) || box.key || ''; 
     
     if (textValue) {
         // Font setup
-        const fontSize = (box.fontSize || 24) * (canvasW / 1000); // Scale font relative to canvas width assumption
+        const fontSize = (box.fontSize || 24) * (canvasW / 1000); 
         ctx.font = `${box.fontWeight || 'normal'} ${fontSize}px ${box.fontFamily || 'Hind Siliguri'}`;
         ctx.fillStyle = box.color || '#000000';
         
@@ -71,11 +71,9 @@ const drawBox = async (
 
         // Vertical Alignment Calculation
         let startY = y;
-        ctx.textBaseline = 'top'; // Default
+        ctx.textBaseline = 'top'; 
 
         if (box.verticalAlign === 'middle') {
-             // We need to estimate height to center it, or use textBaseline middle if single line
-             // For multiline, it's safer to calculate total height
              ctx.textBaseline = 'middle';
              startY = y + h / 2;
         } else if (box.verticalAlign === 'bottom') {
@@ -83,32 +81,39 @@ const drawBox = async (
              startY = y + h;
         }
 
-        // Simple Text Wrapping
-        const words = textValue.split(' ');
-        let line = '';
-        let lineY = startY;
         const lineHeight = fontSize * 1.4;
-        const lines = [];
+        const allLines: string[] = [];
 
-        // Pre-calculate lines
-        for(let n = 0; n < words.length; n++) {
-            const testLine = line + words[n] + ' ';
-            const metrics = ctx.measureText(testLine);
-            const testWidth = metrics.width;
-            if (testWidth > w && n > 0) {
-                lines.push(line);
-                line = words[n] + ' ';
-            } else {
-                line = testLine;
+        // Split by manual new lines first (The "Enter" key)
+        const paragraphs = textValue.split('\n');
+
+        paragraphs.forEach(paragraph => {
+            const words = paragraph.split(' ');
+            let line = '';
+            
+            if (words.length === 0) {
+                 allLines.push(''); 
+                 return;
             }
-        }
-        lines.push(line);
 
-        // Adjust Y for multiline block if vertical align is middle/bottom
-        // The standard context baseline works for single lines, but for block multiline we need manual offset
+            for(let n = 0; n < words.length; n++) {
+                const testLine = line + words[n] + ' ';
+                const metrics = ctx.measureText(testLine);
+                const testWidth = metrics.width;
+                if (testWidth > w && n > 0) {
+                    allLines.push(line);
+                    line = words[n] + ' ';
+                } else {
+                    line = testLine;
+                }
+            }
+            allLines.push(line);
+        });
+
+        // Calculate Block Offset for Vertical Alignment
         let blockOffset = 0;
-        if (lines.length > 1) {
-            const totalH = lines.length * lineHeight;
+        if (allLines.length > 1) {
+            const totalH = allLines.length * lineHeight;
             if (box.verticalAlign === 'middle') {
                  blockOffset = -(totalH / 2) + (lineHeight / 2); 
             } else if (box.verticalAlign === 'bottom') {
@@ -116,8 +121,8 @@ const drawBox = async (
             }
         }
 
-        lines.forEach((l, i) => {
-            ctx.fillText(l, drawX, lineY + blockOffset + (i * lineHeight));
+        allLines.forEach((l, i) => {
+            ctx.fillText(l, drawX, startY + blockOffset + (i * lineHeight));
         });
     }
 
