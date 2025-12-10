@@ -267,7 +267,8 @@ export const TemplateEditor: React.FC = () => {
       verticalAlign: 'top',
       fitMode: 'cover',
       locked: false,
-      opacity: 1
+      opacity: 1,
+      lineHeight: 1.2 // Default tight line height
     };
     if (type === BoxType.IMAGE) { newBox.w = 30; newBox.h = 30; }
     if (type === BoxType.LOGO || type === BoxType.ADS) { newBox.w = 15; newBox.h = 15; }
@@ -679,6 +680,23 @@ export const TemplateEditor: React.FC = () => {
                                                     />
                                                 </div>
                                             </div>
+                                        </div>
+
+                                        {/* Line Height Control (New) */}
+                                        <div>
+                                            <div className="flex justify-between mb-1">
+                                                <label className="text-xs font-bold text-gray-500 uppercase">Line Height</label>
+                                                <span className="text-xs text-primary font-mono">{selectedBox.lineHeight || 1.2}</span>
+                                            </div>
+                                            <input 
+                                                type="range" 
+                                                min="0.8" 
+                                                max="2.5" 
+                                                step="0.1" 
+                                                value={selectedBox.lineHeight || 1.2} 
+                                                onChange={e => updateBox(selectedBox.id, { lineHeight: parseFloat(e.target.value) })} 
+                                                className="w-full h-2 bg-gray-200 rounded-lg accent-primary" 
+                                            />
                                         </div>
 
                                         {/* Horizontal Alignment */}

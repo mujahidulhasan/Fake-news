@@ -81,7 +81,11 @@ const drawBox = async (
              startY = y + h;
         }
 
-        const lineHeight = fontSize * 1.4;
+        // --- LINE HEIGHT CHANGE ---
+        // Default to 1.2 for tighter headlines if not set, previously was implied 1.4
+        const lhMultiplier = box.lineHeight || 1.2;
+        const lineHeight = fontSize * lhMultiplier;
+
         const allLines: string[] = [];
 
         // Split by manual new lines first (The "Enter" key)

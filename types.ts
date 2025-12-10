@@ -23,6 +23,7 @@ export interface BoxConfig {
   fontSize?: number; // Base size, might need scaling
   fontWeight?: string;
   color?: string;
+  lineHeight?: number; // Multiplier (e.g., 1.2)
   align?: 'left' | 'center' | 'right'; // Horizontal Text alignment
   verticalAlign?: 'top' | 'middle' | 'bottom'; // Vertical Text alignment
   
