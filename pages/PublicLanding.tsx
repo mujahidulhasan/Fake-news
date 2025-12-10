@@ -11,7 +11,11 @@ export const PublicLanding: React.FC = () => {
 
   useEffect(() => {
     // Load channels from service
-    setChannels(ChannelService.getAll());
+    const fetchChannels = async () => {
+        const data = await ChannelService.getAll();
+        setChannels(data);
+    };
+    fetchChannels();
   }, []);
 
   const filteredChannels = channels.filter(c => 

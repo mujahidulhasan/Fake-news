@@ -21,8 +21,13 @@ export const ChannelManager: React.FC = () => {
   const [description, setDescription] = useState('');
 
   useEffect(() => {
-    setChannels(ChannelService.getAll());
+    loadChannels();
   }, []);
+
+  const loadChannels = async () => {
+      const data = await ChannelService.getAll();
+      setChannels(data);
+  };
 
   const handleEdit = (channel: Channel) => {
     setEditingId(channel._id);
@@ -45,7 +50,7 @@ export const ChannelManager: React.FC = () => {
     setEditingId(null);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     const newChannel: Channel = {
         _id: editingId || Date.now().toString(),
@@ -54,15 +59,15 @@ export const ChannelManager: React.FC = () => {
         logoUrl,
         description
     };
-    ChannelService.save(newChannel);
-    setChannels(ChannelService.getAll());
+    await ChannelService.save(newChannel);
+    loadChannels();
     resetForm();
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this channel?')) {
-        ChannelService.delete(id);
-        setChannels(ChannelService.getAll());
+        await ChannelService.delete(id);
+        loadChannels();
     }
   };
 
@@ -132,6 +137,7 @@ export const ChannelManager: React.FC = () => {
                     </div>
                 </div>
             ))}
+            {channels.length === 0 && <p className="col-span-2 text-center text-gray-400 py-10">No channels found. Add one to get started.</p>}
         </div>
       </div>
     </div>

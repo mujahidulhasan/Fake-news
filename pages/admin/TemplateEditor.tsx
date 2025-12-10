@@ -94,40 +94,49 @@ export const TemplateEditor: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Load assets and channels
-    setAssets(AssetService.getAll());
-    const loadedChannels = ChannelService.getAll();
-    setChannels(loadedChannels);
-    if (loadedChannels.length > 0) setChannelId(loadedChannels[0]._id);
-    
-    // Load persisted fonts
-    const savedFonts = FontService.getAll().map(f => f.name);
-    setCustomFonts(prev => [...new Set([...prev, ...savedFonts])]);
+    const loadInitialData = async () => {
+        // Load assets
+        const a = await AssetService.getAll();
+        setAssets(a);
+
+        // Load channels
+        const c = await ChannelService.getAll();
+        setChannels(c);
+        if (c.length > 0) setChannelId(c[0]._id);
+        
+        // Load fonts
+        const savedFonts = await FontService.getAll();
+        setCustomFonts(prev => [...new Set([...prev, ...savedFonts.map(f => f.name)])]);
+    };
+    loadInitialData();
   }, []);
 
   // AUTO LOAD Template when channel changes
   useEffect(() => {
     if (!channelId) return;
 
-    const templates = TemplateService.getByChannel(channelId);
-    if (templates && templates.length > 0) {
-        // Load the most recent template for this channel
-        const latest = templates[0];
-        setTemplateId(latest._id);
-        setTemplateName(latest.name);
-        setBackgroundUrl(latest.backgroundUrl);
-        setImgDimensions({ w: latest.width, h: latest.height });
-        setBoxes(latest.boxes);
-        setHasSaved(true);
-    } else {
-        // Reset if no template exists for this channel
-        setTemplateId(null);
-        setTemplateName('New Template');
-        // Keep backgroundURL or reset? Resetting is safer to avoid confusion
-        setBackgroundUrl(null);
-        setBoxes([]);
-        setHasSaved(false);
-    }
+    const loadTemplate = async () => {
+        const templates = await TemplateService.getByChannel(channelId);
+        if (templates && templates.length > 0) {
+            // Load the most recent template for this channel
+            const latest = templates[0];
+            setTemplateId(latest._id);
+            setTemplateName(latest.name);
+            setBackgroundUrl(latest.backgroundUrl);
+            setImgDimensions({ w: latest.width, h: latest.height });
+            setBoxes(latest.boxes);
+            setHasSaved(true);
+        } else {
+            // Reset if no template exists for this channel
+            setTemplateId(null);
+            setTemplateName('New Template');
+            // Keep backgroundURL or reset? Resetting is safer to avoid confusion
+            setBackgroundUrl(null);
+            setBoxes([]);
+            setHasSaved(false);
+        }
+    };
+    loadTemplate();
   }, [channelId]);
 
   useEffect(() => {
@@ -183,7 +192,7 @@ export const TemplateEditor: React.FC = () => {
             document.fonts.add(fontFace);
             
             // Persist Font
-            FontService.saveFont(fontName, base64);
+            await FontService.saveFont(fontName, base64);
             
             setCustomFonts(prev => [...prev, fontName]);
         } catch (err) {
@@ -204,20 +213,23 @@ export const TemplateEditor: React.FC = () => {
                   name: file.name.split('.')[0],
                   url: base64
               };
-              AssetService.add(newAsset);
-              setAssets(AssetService.getAll());
+              await AssetService.add(newAsset);
+              // Refresh
+              const updated = await AssetService.getAll();
+              setAssets(updated);
           } catch (err) {
               alert('Failed to upload asset.');
           }
       }
   };
 
-  const deleteAsset = (id: string) => {
-      AssetService.delete(id);
-      setAssets(AssetService.getAll());
+  const deleteAsset = async (id: string) => {
+      await AssetService.delete(id);
+      const updated = await AssetService.getAll();
+      setAssets(updated);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!backgroundUrl) {
       alert("Please upload a background image first.");
       return;
@@ -236,7 +248,7 @@ export const TemplateEditor: React.FC = () => {
       createdAt: new Date().toISOString()
     };
 
-    TemplateService.save(newTemplate);
+    await TemplateService.save(newTemplate);
     setTemplateId(currentId);
     setHasSaved(true);
     alert("Template Saved Successfully!");

@@ -1,4 +1,4 @@
-const FONT_KEY = 'news_custom_fonts';
+import { supabase } from './supabaseClient';
 
 interface CustomFont {
   name: string;
@@ -6,23 +6,33 @@ interface CustomFont {
 }
 
 export const FontService = {
-  saveFont: (name: string, data: string) => {
-    const fonts = FontService.getAll();
-    // Avoid duplicates
-    if (!fonts.find(f => f.name === name)) {
-      fonts.push({ name, data });
-      localStorage.setItem(FONT_KEY, JSON.stringify(fonts));
+  saveFont: async (name: string, data: string) => {
+    // Check if exists using select instead of single() to avoid PGRST116 error on empty
+    const { data: existing, error: fetchError } = await supabase.from('fonts').select('name').eq('name', name);
+    
+    if (fetchError) {
+        console.error('Error checking font existence:', fetchError.message);
+        return;
+    }
+
+    if (!existing || existing.length === 0) {
+        const { error } = await supabase.from('fonts').insert({ name, data });
+        if (error) console.error('Error saving font:', error.message);
     }
   },
 
-  getAll: (): CustomFont[] => {
-    const data = localStorage.getItem(FONT_KEY);
-    return data ? JSON.parse(data) : [];
+  getAll: async (): Promise<CustomFont[]> => {
+    const { data, error } = await supabase.from('fonts').select('*');
+    if (error) {
+        console.error('Error fetching fonts:', error.message);
+        return [];
+    }
+    return (data || []) as CustomFont[];
   },
 
   // Inject fonts into the document head so they are available for Canvas
   loadSavedFonts: async () => {
-    const fonts = FontService.getAll();
+    const fonts = await FontService.getAll();
     const loadedFonts: string[] = [];
     
     for (const font of fonts) {

@@ -21,19 +21,23 @@ export const CardGenerator: React.FC = () => {
     FontService.loadSavedFonts();
     
     // Load Global Assets
-    const logos = AssetService.getByType('LOGO');
-    const ads = AssetService.getByType('ADS');
-    setAssets({ logos, ads });
+    const loadAssetsAndTemplate = async () => {
+        const logos = await AssetService.getByType('LOGO');
+        const ads = await AssetService.getByType('ADS');
+        setAssets({ logos, ads });
 
-    if (channelId) {
-        const templates = TemplateService.getByChannel(channelId);
-        if (templates && templates.length > 0) {
-            setTemplate(templates[0]);
-        } else {
-            const defaults = TemplateService.getByChannel('1');
-            if (defaults.length > 0) setTemplate(defaults[0]);
+        if (channelId) {
+            const templates = await TemplateService.getByChannel(channelId);
+            if (templates && templates.length > 0) {
+                setTemplate(templates[0]);
+            } else {
+                // Fallback attempt (optional)
+                const defaults = await TemplateService.getByChannel('1');
+                if (defaults.length > 0) setTemplate(defaults[0]);
+            }
         }
-    }
+    };
+    loadAssetsAndTemplate();
   }, [channelId]);
 
   // Live Render

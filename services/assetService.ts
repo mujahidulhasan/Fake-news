@@ -1,31 +1,36 @@
 import { Asset } from '../types';
-
-const ASSET_KEY = 'news_assets';
+import { supabase } from './supabaseClient';
 
 export const AssetService = {
   // Get all assets
-  getAll: (): Asset[] => {
-    const data = localStorage.getItem(ASSET_KEY);
-    return data ? JSON.parse(data) : [];
+  getAll: async (): Promise<Asset[]> => {
+    const { data, error } = await supabase.from('assets').select('*');
+    if (error) {
+        console.error('Error fetching assets:', error.message);
+        return [];
+    }
+    return (data || []) as Asset[];
   },
 
   // Get assets by type
-  getByType: (type: 'LOGO' | 'ADS'): Asset[] => {
-    const all = AssetService.getAll();
-    return all.filter(a => a.type === type);
+  getByType: async (type: 'LOGO' | 'ADS'): Promise<Asset[]> => {
+    const { data, error } = await supabase.from('assets').select('*').eq('type', type);
+    if (error) {
+        console.error('Error fetching assets by type:', error.message);
+        return [];
+    }
+    return (data || []) as Asset[];
   },
 
   // Add new asset
-  add: (asset: Asset): void => {
-    const all = AssetService.getAll();
-    all.push(asset);
-    localStorage.setItem(ASSET_KEY, JSON.stringify(all));
+  add: async (asset: Asset): Promise<void> => {
+    const { error } = await supabase.from('assets').insert(asset);
+    if (error) console.error('Error adding asset:', error.message);
   },
 
   // Delete asset
-  delete: (id: string): void => {
-    const all = AssetService.getAll();
-    const filtered = all.filter(a => a.id !== id);
-    localStorage.setItem(ASSET_KEY, JSON.stringify(filtered));
+  delete: async (id: string): Promise<void> => {
+    const { error } = await supabase.from('assets').delete().eq('id', id);
+    if (error) console.error('Error deleting asset:', error.message);
   }
 };
