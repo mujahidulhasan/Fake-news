@@ -22,7 +22,7 @@ const Icons = {
   AlignCenter: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="21" y1="6" x2="3" y2="6"/><line x1="17" y1="12" x2="7" y2="12"/><line x1="19" y1="18" x2="5" y2="18"/></svg>,
   AlignRight: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="12" x2="9" y2="12"/><line x1="21" y1="18" x2="7" y2="18"/></svg>,
   
-  AlignTop: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="6" y1="21" x2="6" y2="3"/><line x1="12" y1="15" x2="12" y2="3"/><line x1="18" y1="17" x2="18" y2="3"/></svg>, // Reused/approximated icon
+  AlignTop: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="6" y1="21" x2="6" y2="3"/><line x1="12" y1="15" x2="12" y2="3"/><line x1="18" y1="17" x2="18" y2="3"/></svg>, 
   AlignMiddle: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="21" y1="12" x2="3" y2="12"/><polyline points="15 8 12 12 9 8"/><polyline points="15 16 12 12 9 16"/></svg>, 
   AlignBottom: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="6" y1="3" x2="6" y2="21"/><line x1="12" y1="9" x2="12" y2="21"/><line x1="18" y1="7" x2="18" y2="21"/></svg>,
 
@@ -170,7 +170,8 @@ export const TemplateEditor: React.FC = () => {
             document.fonts.add(fontFace);
             setCustomFonts(prev => [...prev, fontName]);
         } catch (err) {
-            alert('Failed to load font.');
+            alert('Failed to load font. Check console.');
+            console.error(err);
         }
     }
   };
@@ -423,42 +424,42 @@ export const TemplateEditor: React.FC = () => {
       )}
 
       {/* --- HEADER --- */}
-      <div className="bg-white shadow-sm px-4 py-3 flex justify-between items-center z-20 shrink-0 h-16 border-b border-gray-200">
-        <div className="flex items-center gap-3">
-             <Link to="/admin/dashboard" className="text-gray-500 hover:text-gray-800"><Icons.Back /></Link>
-             <div className="flex flex-col">
+      <div className="bg-white shadow-sm px-2 md:px-4 py-3 flex justify-between items-center z-20 shrink-0 h-16 border-b border-gray-200">
+        <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
+             <Link to="/admin/dashboard" className="text-gray-500 hover:text-gray-800 shrink-0"><Icons.Back /></Link>
+             <div className="flex flex-col min-w-0">
                  <input 
-                     className="bg-transparent font-bold text-gray-800 border-b border-transparent focus:border-primary outline-none max-w-[150px] md:max-w-xs transition-all text-sm" 
+                     className="bg-transparent font-bold text-gray-800 border-b border-transparent focus:border-primary outline-none w-24 md:w-auto md:max-w-xs transition-all text-sm truncate" 
                      value={templateName} 
                      onChange={e => setTemplateName(e.target.value)} 
                  />
                  <select 
                     value={channelId} 
                     onChange={e => setChannelId(e.target.value)}
-                    className="text-xs text-gray-500 bg-transparent outline-none cursor-pointer hover:text-primary mt-0.5"
+                    className="text-xs text-gray-500 bg-transparent outline-none cursor-pointer hover:text-primary mt-0.5 truncate max-w-[120px]"
                  >
                     {channels.map(c => <option key={c._id} value={c._id}>for {c.name}</option>)}
                  </select>
              </div>
              {hasSaved && !templateId && (
-                 <button onClick={loadLastSaved} className="ml-2 text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded flex items-center gap-1 hover:bg-blue-100"><Icons.Reload /> Load Last</button>
+                 <button onClick={loadLastSaved} className="hidden md:flex ml-2 text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded items-center gap-1 hover:bg-blue-100"><Icons.Reload /> Load Last</button>
              )}
         </div>
-        <div className="flex items-center gap-3">
-            <button onClick={() => setShowAssetModal(true)} className="text-xs font-semibold text-gray-600 hover:text-primary flex items-center gap-1">
-                <Icons.Upload /> Manage Assets
+        <div className="flex items-center gap-2 md:gap-3 shrink-0">
+            <button onClick={() => setShowAssetModal(true)} className="text-xs font-semibold text-gray-600 hover:text-primary flex items-center gap-1 p-2 md:p-0">
+                <Icons.Upload /> <span className="hidden md:inline">Manage Assets</span>
             </button>
             <button 
-            className="flex items-center gap-2 bg-primary text-white px-3 py-1.5 md:px-4 md:py-2 rounded-full shadow hover:bg-red-600 active:scale-95 transition-all text-xs md:text-sm font-bold"
+            className="flex items-center gap-2 bg-primary text-white px-3 py-2 md:px-4 md:py-2 rounded-full shadow hover:bg-red-600 active:scale-95 transition-all text-xs md:text-sm font-bold"
             onClick={handleSave}
             >
-            <Icons.Save /> <span>Save</span>
+            <Icons.Save /> <span className="hidden md:inline">Save</span>
             </button>
         </div>
       </div>
 
       {/* --- CANVAS AREA --- */}
-      <div className="flex-1 relative bg-gray-200/50 overflow-hidden flex items-center justify-center p-8">
+      <div className="flex-1 relative bg-gray-200/50 overflow-hidden flex items-center justify-center p-4 md:p-8">
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-5">
                 <div className="w-full h-full" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
             </div>
@@ -607,13 +608,19 @@ export const TemplateEditor: React.FC = () => {
                                         {/* Font Family */}
                                         <div>
                                             <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">Font Family</label>
-                                            <select 
-                                                className="w-full p-2 bg-white border border-gray-200 rounded text-sm outline-none focus:border-primary"
-                                                value={selectedBox.fontFamily}
-                                                onChange={e => updateBox(selectedBox.id, { fontFamily: e.target.value })}
-                                            >
-                                                {customFonts.map(f => <option key={f} value={f}>{f}</option>)}
-                                            </select>
+                                            <div className="flex gap-2">
+                                                <select 
+                                                    className="flex-1 p-2 bg-white border border-gray-200 rounded text-sm outline-none focus:border-primary"
+                                                    value={selectedBox.fontFamily}
+                                                    onChange={e => updateBox(selectedBox.id, { fontFamily: e.target.value })}
+                                                >
+                                                    {customFonts.map(f => <option key={f} value={f}>{f}</option>)}
+                                                </select>
+                                                <label className="p-2 bg-gray-100 border border-gray-200 rounded cursor-pointer hover:bg-gray-200 text-gray-600 flex items-center justify-center w-10 shrink-0" title="Upload Font">
+                                                    <Icons.Upload />
+                                                    <input type="file" accept=".ttf,.otf,.woff,.woff2" className="hidden" onChange={handleFontUpload} />
+                                                </label>
+                                            </div>
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-4">
