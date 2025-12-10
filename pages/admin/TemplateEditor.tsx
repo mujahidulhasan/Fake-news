@@ -3,6 +3,7 @@ import { BoxConfig, BoxType, Template, Channel, Asset } from '../../types';
 import { Link, useNavigate } from 'react-router-dom';
 import { TemplateService } from '../../services/templateService';
 import { AssetService } from '../../services/assetService';
+import { ChannelService } from '../../services/channelService';
 
 // --- ICONS ---
 const Icons = {
@@ -20,6 +21,11 @@ const Icons = {
   AlignLeft: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="21" y1="6" x2="3" y2="6"/><line x1="15" y1="12" x2="3" y2="12"/><line x1="17" y1="18" x2="3" y2="18"/></svg>,
   AlignCenter: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="21" y1="6" x2="3" y2="6"/><line x1="17" y1="12" x2="7" y2="12"/><line x1="19" y1="18" x2="5" y2="18"/></svg>,
   AlignRight: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="12" x2="9" y2="12"/><line x1="21" y1="18" x2="7" y2="18"/></svg>,
+  
+  AlignTop: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="6" y1="21" x2="6" y2="3"/><line x1="12" y1="15" x2="12" y2="3"/><line x1="18" y1="17" x2="18" y2="3"/></svg>, // Reused/approximated icon
+  AlignMiddle: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="21" y1="12" x2="3" y2="12"/><polyline points="15 8 12 12 9 8"/><polyline points="15 16 12 12 9 16"/></svg>, 
+  AlignBottom: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="6" y1="3" x2="6" y2="21"/><line x1="12" y1="9" x2="12" y2="21"/><line x1="18" y1="7" x2="18" y2="21"/></svg>,
+
   PosLeft: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/><line x1="21" y1="5" x2="21" y2="19"/></svg>, 
   PosCenter: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/></svg>,
   PosRight: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/><line x1="3" y1="5" x2="3" y2="19"/></svg>,
@@ -30,7 +36,8 @@ const Icons = {
   ArrowUp: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>,
   ArrowDown: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>,
   Plus: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
-  Upload: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+  Upload: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
+  RefImage: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
 };
 
 // Helper to convert file to base64
@@ -43,18 +50,11 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
-const CHANNELS: Channel[] = [
-    { _id: '1', name: 'Jamuna TV', slug: 'jamuna', logoUrl: '' },
-    { _id: '2', name: 'Somoy TV', slug: 'somoy', logoUrl: '' },
-    { _id: '3', name: 'BBC Bangla', slug: 'bbc', logoUrl: '' },
-    { _id: '4', name: 'Prothom Alo', slug: 'palo', logoUrl: '' },
-];
-
 export const TemplateEditor: React.FC = () => {
   const navigate = useNavigate();
   const [templateName, setTemplateName] = useState('My Custom Template');
   const [templateId, setTemplateId] = useState<string | null>(null);
-  const [channelId, setChannelId] = useState('1'); // Default to Jamuna
+  const [channelId, setChannelId] = useState('');
   const [backgroundUrl, setBackgroundUrl] = useState<string | null>(null);
   const [boxes, setBoxes] = useState<BoxConfig[]>([]);
   const [selectedBoxId, setSelectedBoxId] = useState<string | null>(null);
@@ -66,9 +66,16 @@ export const TemplateEditor: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'properties' | 'layers'>('properties');
   const [hitBoundary, setHitBoundary] = useState(false);
   
+  // Channels State
+  const [channels, setChannels] = useState<Channel[]>([]);
+
   // Asset Management State
   const [showAssetModal, setShowAssetModal] = useState(false);
   const [assets, setAssets] = useState<Asset[]>([]);
+
+  // Reference Image State (Trace Layer)
+  const [refImage, setRefImage] = useState<string | null>(null);
+  const [refOpacity, setRefOpacity] = useState(0.4);
   
   // Dragging State
   const dragRef = useRef<{ 
@@ -85,8 +92,12 @@ export const TemplateEditor: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Load assets on mount
+    // Load assets and channels
     setAssets(AssetService.getAll());
+    const loadedChannels = ChannelService.getAll();
+    setChannels(loadedChannels);
+    if (loadedChannels.length > 0) setChannelId(loadedChannels[0]._id);
+
     const all = TemplateService.getAll();
     if (all.length > 0) setHasSaved(true);
   }, []);
@@ -134,6 +145,18 @@ export const TemplateEditor: React.FC = () => {
       alert('Error reading image file.');
       setLoading(false);
     }
+  };
+
+  // Load Reference Image
+  const handleRefImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      try {
+          const base64 = await fileToBase64(file);
+          setRefImage(base64);
+      } catch (err) {
+          alert('Error loading reference image');
+      }
   };
 
   const handleFontUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -211,6 +234,7 @@ export const TemplateEditor: React.FC = () => {
       fontSize: 24,
       fontFamily: 'Hind Siliguri',
       align: 'left',
+      verticalAlign: 'top',
       fitMode: 'cover',
       locked: false,
       opacity: 1
@@ -264,6 +288,10 @@ export const TemplateEditor: React.FC = () => {
   // Text Alignment (Justify text inside box)
   const alignText = (id: string, align: 'left' | 'center' | 'right') => {
       updateBox(id, { align });
+  };
+  
+  const alignTextVertical = (id: string, verticalAlign: 'top' | 'middle' | 'bottom') => {
+      updateBox(id, { verticalAlign });
   };
 
   const getClientCoords = (e: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent) => {
@@ -409,7 +437,7 @@ export const TemplateEditor: React.FC = () => {
                     onChange={e => setChannelId(e.target.value)}
                     className="text-xs text-gray-500 bg-transparent outline-none cursor-pointer hover:text-primary mt-0.5"
                  >
-                    {CHANNELS.map(c => <option key={c._id} value={c._id}>for {c.name}</option>)}
+                    {channels.map(c => <option key={c._id} value={c._id}>for {c.name}</option>)}
                  </select>
              </div>
              {hasSaved && !templateId && (
@@ -464,7 +492,16 @@ export const TemplateEditor: React.FC = () => {
                 >
                     <img src={backgroundUrl} alt="Template Background" className="w-full h-full object-contain pointer-events-none block" draggable={false} />
 
-                    <div className="absolute inset-0">
+                    {/* Reference Image Overlay */}
+                    {refImage && (
+                        <img 
+                            src={refImage} 
+                            style={{ opacity: refOpacity }}
+                            className="absolute inset-0 w-full h-full object-contain pointer-events-none z-[1]"
+                        />
+                    )}
+
+                    <div className="absolute inset-0 z-10">
                     {boxes.map(box => (
                         <div
                             key={box.id}
@@ -611,9 +648,9 @@ export const TemplateEditor: React.FC = () => {
                                             </div>
                                         </div>
 
-                                        {/* Text Alignment */}
+                                        {/* Horizontal Alignment */}
                                         <div>
-                                            <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">Text Alignment</label>
+                                            <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">Horizontal Alignment</label>
                                             <div className="flex bg-gray-50 border border-gray-200 rounded p-1">
                                                 {['left', 'center', 'right'].map((align) => (
                                                     <button
@@ -622,6 +659,22 @@ export const TemplateEditor: React.FC = () => {
                                                         className={`flex-1 py-1.5 rounded flex justify-center ${selectedBox.align === align ? 'bg-white shadow-sm text-primary' : 'text-gray-400 hover:text-gray-600'}`}
                                                     >
                                                         {align === 'left' ? <Icons.AlignLeft /> : align === 'center' ? <Icons.AlignCenter /> : <Icons.AlignRight />}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Vertical Alignment */}
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">Vertical Alignment</label>
+                                            <div className="flex bg-gray-50 border border-gray-200 rounded p-1">
+                                                {['top', 'middle', 'bottom'].map((align) => (
+                                                    <button
+                                                        key={align}
+                                                        onClick={() => alignTextVertical(selectedBox.id, align as 'top' | 'middle' | 'bottom')}
+                                                        className={`flex-1 py-1.5 rounded flex justify-center ${selectedBox.verticalAlign === align ? 'bg-white shadow-sm text-primary' : 'text-gray-400 hover:text-gray-600'}`}
+                                                    >
+                                                        {align === 'top' ? <Icons.AlignTop /> : align === 'middle' ? <Icons.AlignMiddle /> : <Icons.AlignBottom />}
                                                     </button>
                                                 ))}
                                             </div>
@@ -644,6 +697,23 @@ export const TemplateEditor: React.FC = () => {
                         {/* --- LAYERS --- */}
                         {activeTab === 'layers' && (
                             <div>
+                                <div className="mb-4 p-3 bg-yellow-50 rounded border border-yellow-200">
+                                    <h4 className="text-xs font-bold text-yellow-800 mb-2">Reference Overlay</h4>
+                                    <div className="flex gap-2 mb-2">
+                                        <label className="flex-1 text-xs bg-white border rounded p-1 text-center cursor-pointer hover:bg-gray-50">
+                                            Upload Ref Image
+                                            <input type="file" accept="image/*" onChange={handleRefImageUpload} className="hidden" />
+                                        </label>
+                                        {refImage && <button onClick={() => setRefImage(null)} className="p-1 text-red-500 bg-white border rounded hover:bg-red-50"><Icons.Trash /></button>}
+                                    </div>
+                                    {refImage && (
+                                        <div>
+                                            <label className="text-xs block text-yellow-700 mb-1">Opacity: {Math.round(refOpacity * 100)}%</label>
+                                            <input type="range" min="0" max="1" step="0.1" value={refOpacity} onChange={e => setRefOpacity(parseFloat(e.target.value))} className="w-full h-1 bg-yellow-200 rounded-lg appearance-none cursor-pointer" />
+                                        </div>
+                                    )}
+                                </div>
+
                                 <div className="flex gap-2 mb-4">
                                     <button onClick={() => addBox(BoxType.TEXT)} className="flex-1 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 hover:bg-white hover:text-primary flex items-center justify-center gap-1"><Icons.Plus /> Text</button>
                                     <button onClick={() => addBox(BoxType.IMAGE)} className="flex-1 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 hover:bg-white hover:text-primary flex items-center justify-center gap-1"><Icons.Plus /> Image</button>
@@ -689,10 +759,10 @@ export const TemplateEditor: React.FC = () => {
                     <span className="text-[10px] font-medium">{tool.label}</span>
                 </button>
             ))}
-            <label className="flex flex-col items-center justify-center w-14 h-14 text-gray-600 hover:text-primary active:scale-90 transition-transform cursor-pointer">
-                <div className="p-2 bg-gray-100 rounded-xl mb-1"><Icons.Font /></div>
-                <span className="text-[10px] font-medium">Font</span>
-                <input type="file" accept=".ttf,.otf,.woff" onChange={handleFontUpload} className="hidden" />
+             <label className="flex flex-col items-center justify-center w-14 h-14 text-gray-600 hover:text-primary active:scale-90 transition-transform cursor-pointer">
+                <div className="p-2 bg-gray-100 rounded-xl mb-1"><Icons.RefImage /></div>
+                <span className="text-[10px] font-medium">Ref Img</span>
+                <input type="file" accept="image/*" onChange={handleRefImageUpload} className="hidden" />
             </label>
         </div>
       </div>

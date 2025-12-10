@@ -24,7 +24,7 @@ export const AdminDashboard: React.FC = () => {
             <div className="text-4xl mb-4 p-4 bg-blue-100 rounded-full text-blue-500 group-hover:scale-110 transition-transform">📺</div>
             <h3 className="text-xl font-bold mb-2">Channels</h3>
             <p className="text-gray-500 mb-4 text-sm">Manage news channels, logos and descriptions.</p>
-            <button className="bg-gray-100 text-gray-600 px-4 py-2 rounded hover:bg-blue-500 hover:text-white transition w-full text-sm font-medium">Manage Channels</button>
+            <Link to="/admin/channels" className="bg-gray-100 text-gray-600 px-4 py-2 rounded hover:bg-blue-500 hover:text-white transition w-full text-sm font-medium inline-block">Manage Channels</Link>
         </GlassCard>
 
         <GlassCard className="p-6 flex flex-col items-center text-center group cursor-pointer hover:bg-white/60">
@@ -40,7 +40,7 @@ export const AdminDashboard: React.FC = () => {
             <div className="text-4xl mb-4 p-4 bg-green-100 rounded-full text-green-600 group-hover:scale-110 transition-transform">📂</div>
             <h3 className="text-xl font-bold mb-2">Assets Library</h3>
             <p className="text-gray-500 mb-4 text-sm">Upload global logos, ads, fonts and stickers.</p>
-            <button className="bg-gray-100 text-gray-600 px-4 py-2 rounded hover:bg-green-500 hover:text-white transition w-full text-sm font-medium">Manage Assets</button>
+            <button onClick={() => alert('Access assets via the Editor')} className="bg-gray-100 text-gray-600 px-4 py-2 rounded hover:bg-green-500 hover:text-white transition w-full text-sm font-medium">Manage Assets</button>
         </GlassCard>
       </div>
       

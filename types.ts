@@ -23,7 +23,8 @@ export interface BoxConfig {
   fontSize?: number; // Base size, might need scaling
   fontWeight?: string;
   color?: string;
-  align?: 'left' | 'center' | 'right'; // Text alignment
+  align?: 'left' | 'center' | 'right'; // Horizontal Text alignment
+  verticalAlign?: 'top' | 'middle' | 'bottom'; // Vertical Text alignment
   
   // Image specific
   fitMode?: 'cover' | 'contain' | 'fill';

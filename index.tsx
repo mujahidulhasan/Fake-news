@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, Component } from 'react';
 import { createRoot } from 'react-dom/client';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { PublicLanding } from './pages/PublicLanding';
@@ -6,6 +6,7 @@ import { CardGenerator } from './pages/CardGenerator';
 import { AdminLogin } from './pages/admin/AdminLogin';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { TemplateEditor } from './pages/admin/TemplateEditor';
+import { ChannelManager } from './pages/admin/ChannelManager';
 
 // Simple Error Boundary to catch render crashes
 interface ErrorBoundaryProps {
@@ -17,7 +18,7 @@ interface ErrorBoundaryState {
   error: any;
 }
 
-class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   state: ErrorBoundaryState = { hasError: false, error: null };
 
   static getDerivedStateFromError(error: any) {
@@ -79,6 +80,12 @@ const App = () => {
           <Route path="/admin/editor" element={
             <ProtectedRoute>
                 <TemplateEditor />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/admin/channels" element={
+            <ProtectedRoute>
+                <ChannelManager />
             </ProtectedRoute>
           } />
 

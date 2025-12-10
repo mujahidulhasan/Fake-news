@@ -24,8 +24,6 @@ export const renderCard = async (
   }
 
   // 3. Draw Boxes
-  // We draw in the order of the array (0 is bottom, length-1 is top)
-  // We do NOT sort by type anymore, we rely on the layer order defined in the editor.
   const sortedBoxes = template.boxes;
 
   for (const box of sortedBoxes) {
@@ -58,40 +56,69 @@ const drawBox = async (
         const fontSize = (box.fontSize || 24) * (canvasW / 1000); // Scale font relative to canvas width assumption
         ctx.font = `${box.fontWeight || 'normal'} ${fontSize}px ${box.fontFamily || 'Hind Siliguri'}`;
         ctx.fillStyle = box.color || '#000000';
-        ctx.textBaseline = 'top';
         
-        // Alignment
+        // Horizontal Alignment Calculation
         let drawX = x;
         if (box.align === 'center') {
-        ctx.textAlign = 'center';
-        drawX = x + w / 2;
+            ctx.textAlign = 'center';
+            drawX = x + w / 2;
         } else if (box.align === 'right') {
-        ctx.textAlign = 'right';
-        drawX = x + w;
+            ctx.textAlign = 'right';
+            drawX = x + w;
         } else {
-        ctx.textAlign = 'left';
+            ctx.textAlign = 'left';
         }
 
-        // Simple text wrapping could go here, for now just fillText
-        // Basic wrapping:
+        // Vertical Alignment Calculation
+        let startY = y;
+        ctx.textBaseline = 'top'; // Default
+
+        if (box.verticalAlign === 'middle') {
+             // We need to estimate height to center it, or use textBaseline middle if single line
+             // For multiline, it's safer to calculate total height
+             ctx.textBaseline = 'middle';
+             startY = y + h / 2;
+        } else if (box.verticalAlign === 'bottom') {
+             ctx.textBaseline = 'bottom';
+             startY = y + h;
+        }
+
+        // Simple Text Wrapping
         const words = textValue.split(' ');
         let line = '';
-        let lineY = y;
+        let lineY = startY;
         const lineHeight = fontSize * 1.4;
+        const lines = [];
 
+        // Pre-calculate lines
         for(let n = 0; n < words.length; n++) {
-        const testLine = line + words[n] + ' ';
-        const metrics = ctx.measureText(testLine);
-        const testWidth = metrics.width;
-        if (testWidth > w && n > 0) {
-            ctx.fillText(line, drawX, lineY);
-            line = words[n] + ' ';
-            lineY += lineHeight;
-        } else {
-            line = testLine;
+            const testLine = line + words[n] + ' ';
+            const metrics = ctx.measureText(testLine);
+            const testWidth = metrics.width;
+            if (testWidth > w && n > 0) {
+                lines.push(line);
+                line = words[n] + ' ';
+            } else {
+                line = testLine;
+            }
         }
+        lines.push(line);
+
+        // Adjust Y for multiline block if vertical align is middle/bottom
+        // The standard context baseline works for single lines, but for block multiline we need manual offset
+        let blockOffset = 0;
+        if (lines.length > 1) {
+            const totalH = lines.length * lineHeight;
+            if (box.verticalAlign === 'middle') {
+                 blockOffset = -(totalH / 2) + (lineHeight / 2); 
+            } else if (box.verticalAlign === 'bottom') {
+                 blockOffset = -totalH + lineHeight;
+            }
         }
-        ctx.fillText(line, drawX, lineY);
+
+        lines.forEach((l, i) => {
+            ctx.fillText(l, drawX, lineY + blockOffset + (i * lineHeight));
+        });
     }
 
   } else if (box.type === BoxType.IMAGE || box.type === BoxType.LOGO || box.type === BoxType.ADS || box.type === BoxType.WATERMARK) {
@@ -148,10 +175,6 @@ const drawBox = async (
         } catch (err) {
             console.warn("Could not load image for box", box.key);
         }
-    } else {
-        // Draw placeholder rect in editor if no image
-        // Only if we are in editor context (implied if we are passing empty formData but rendering templates)
-        // For now, we just skip drawing.
     }
   }
   
