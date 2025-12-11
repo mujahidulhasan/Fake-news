@@ -39,16 +39,17 @@ export interface Template {
   _id: string;
   channelId: string;
   name: string;
-  backgroundUrl: string; // The base card design
-  width: number; // Original pixel width
-  height: number; // Original pixel height
+  backgroundUrl: string; 
+  watermarkUrl?: string | null; // Template specific watermark
+  width: number; 
+  height: number; 
   boxes: BoxConfig[];
   createdAt: string;
 }
 
 export interface Asset {
   id: string;
-  channelId?: string; // Optional: if null, it's global. If set, specific to channel.
+  channelId?: string; 
   type: 'LOGO' | 'ADS';
   name: string;
   url: string;
@@ -69,10 +70,22 @@ export interface UserFormData {
 export interface PremiumUser {
     id: string;
     username: string;
-    password?: string; // Only for creating/editing logic
+    password?: string;
     start_date: string;
     end_date: string;
     is_active: boolean;
+}
+
+export interface DeveloperInfo {
+    name: string;
+    description: string;
+    photoUrl: string;
+    socials: {
+        facebook: string;
+        whatsapp: string;
+        email: string;
+        youtube: string;
+    }
 }
 
 export type DownloadQuality = 'SD' | 'HD' | '2K' | '4K';

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Template, BoxType, UserFormData, Asset, PremiumUser, DownloadQuality } from '../types';
+import { Template, BoxType, UserFormData, Asset, PremiumUser, DownloadQuality, DeveloperInfo } from '../types';
 import { GlassCard } from '../components/GlassCard';
 import { VisualSelect } from '../components/VisualSelect';
 import { renderCard } from '../utils/canvasRender';
@@ -9,11 +9,14 @@ import { AssetService } from '../services/assetService';
 import { FontService } from '../services/fontService';
 import { UserService } from '../services/userService';
 
-const LockIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-  </svg>
-);
+// Icons
+const Icons = {
+    Back: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>,
+    Premium: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z"/></svg>,
+    Diamond: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3h12l4 6-10 13L2 9z"/><path d="M11 3 8 9l4 13 4-13-3-6"/><path d="M2 9h20"/></svg>,
+    Lock: () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>,
+    Check: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-green-500"><polyline points="20 6 9 17 4 12"/></svg>,
+};
 
 export const CardGenerator: React.FC = () => {
   const { channelId } = useParams();
@@ -21,20 +24,25 @@ export const CardGenerator: React.FC = () => {
   const [formData, setFormData] = useState<UserFormData>({});
   const [assets, setAssets] = useState<{ logos: Asset[], ads: Asset[] }>({ logos: [], ads: [] });
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [loading, setLoading] = useState(true);
   
   // Premium & Watermark State
   const [premiumUser, setPremiumUser] = useState<PremiumUser | null>(null);
-  const [watermarkUrl, setWatermarkUrl] = useState<string | null>(null);
   const [showWatermark, setShowWatermark] = useState(true);
   
-  // Download Modal State
+  // Modals
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [generating, setGenerating] = useState(false);
-
-  // Login Modal State
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [showContactInfo, setShowContactInfo] = useState(false);
+  
+  // Auth Form
   const [loginUser, setLoginUser] = useState('');
   const [loginPass, setLoginPass] = useState('');
+
+  // Dev Info for purchase
+  const [devInfo, setDevInfo] = useState<DeveloperInfo | null>(null);
 
   // Initialization
   useEffect(() => {
@@ -42,19 +50,20 @@ export const CardGenerator: React.FC = () => {
     const storedUser = localStorage.getItem('premiumUser');
     if (storedUser) {
         setPremiumUser(JSON.parse(storedUser));
-        setShowWatermark(false); // Default off for premium
+        setShowWatermark(false);
     }
+    const fetchDev = async () => {
+        const info = await AssetService.getDeveloperInfo();
+        setDevInfo(info);
+    }
+    fetchDev();
   }, []);
 
   // Load Template and Channel Specific Assets
   useEffect(() => {
+    setLoading(true);
     const loadAssetsAndTemplate = async () => {
-        // Get System Watermark
-        const wm = await AssetService.getSystemWatermark();
-        setWatermarkUrl(wm);
-
         if (channelId) {
-            // Load Channel Specific Assets
             const logos = await AssetService.getByChannelAndType(channelId, 'LOGO');
             const ads = await AssetService.getByChannelAndType(channelId, 'ADS');
             setAssets({ logos, ads });
@@ -63,10 +72,11 @@ export const CardGenerator: React.FC = () => {
             if (templates && templates.length > 0) {
                 setTemplate(templates[0]);
             } else {
-                const defaults = await TemplateService.getByChannel('1'); // Fallback logic
+                const defaults = await TemplateService.getByChannel('1'); 
                 if (defaults.length > 0) setTemplate(defaults[0]);
             }
         }
+        setLoading(false);
     };
     loadAssetsAndTemplate();
   }, [channelId]);
@@ -83,11 +93,11 @@ export const CardGenerator: React.FC = () => {
             formData, 
             assetMap, 
             1, // Preview scale
-            watermarkUrl, 
+            template.watermarkUrl || null, // Use Template Specific Watermark
             showWatermark
         );
     }
-  }, [template, formData, assets, showWatermark, watermarkUrl, premiumUser]);
+  }, [template, formData, assets, showWatermark, premiumUser]);
 
   const handleInputChange = (key: string, value: string | File) => {
     setFormData(prev => ({ ...prev, [key]: value }));
@@ -101,7 +111,6 @@ export const CardGenerator: React.FC = () => {
           setPremiumUser(user);
           setShowLoginModal(false);
           setShowWatermark(false);
-          alert(`Welcome back, ${user.username}!`);
       } else {
           alert("Invalid credentials or expired subscription.");
       }
@@ -128,12 +137,11 @@ export const CardGenerator: React.FC = () => {
           case '4K': scale = 4.0; suffix='4K'; break;
       }
 
-      // Create a temporary hidden canvas for high-res rendering
       const tempCanvas = document.createElement('canvas');
       const assetMap: { [key: string]: string } = {};
       [...assets.logos, ...assets.ads].forEach(a => assetMap[a.id] = a.url);
 
-      renderCard(tempCanvas, template, formData, assetMap, scale, watermarkUrl, showWatermark).then(() => {
+      renderCard(tempCanvas, template, formData, assetMap, scale, template.watermarkUrl || null, showWatermark).then(() => {
          const link = document.createElement('a');
          link.download = `newscard-${template.name}-${suffix}-${Date.now()}.png`;
          link.href = tempCanvas.toDataURL('image/png', 0.9);
@@ -141,6 +149,37 @@ export const CardGenerator: React.FC = () => {
          setGenerating(false);
       });
   };
+
+  const triggerSubscription = () => {
+      setShowSubscriptionModal(true);
+      setShowContactInfo(false);
+  };
+
+  if (loading) {
+      return (
+        <div className="container mx-auto px-4 py-6 animate-pulse">
+            <div className="flex justify-between items-center mb-6">
+                 <div className="h-8 w-32 bg-gray-300 rounded"></div>
+                 <div className="h-8 w-24 bg-gray-300 rounded"></div>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-2 space-y-4">
+                    <div className="w-full aspect-video bg-gray-300 rounded-2xl"></div>
+                    <div className="h-6 w-48 bg-gray-300 rounded mx-auto"></div>
+                </div>
+                <div className="lg:col-span-1">
+                    <div className="h-96 bg-gray-200 rounded-2xl p-6 space-y-4">
+                         <div className="h-6 w-32 bg-gray-300 rounded mb-4"></div>
+                         <div className="h-10 w-full bg-gray-300 rounded"></div>
+                         <div className="h-10 w-full bg-gray-300 rounded"></div>
+                         <div className="h-10 w-full bg-gray-300 rounded"></div>
+                         <div className="h-12 w-full bg-red-200 rounded mt-6"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+      );
+  }
 
   if (!template) return (
       <div className="min-h-screen flex flex-col items-center justify-center text-gray-500">
@@ -166,6 +205,73 @@ export const CardGenerator: React.FC = () => {
           </div>
       )}
 
+      {/* Subscription/Purchase Modal (Bangla) */}
+      {showSubscriptionModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+              <GlassCard className="w-full max-w-md p-0 relative overflow-hidden flex flex-col max-h-[90vh]">
+                   <button onClick={() => setShowSubscriptionModal(false)} className="absolute top-3 right-3 text-white z-10 bg-black/20 rounded-full p-1 hover:bg-red-500">✕</button>
+                   
+                   {!showContactInfo ? (
+                     <>
+                        {/* Header */}
+                        <div className="bg-gradient-to-br from-yellow-400 to-orange-500 p-6 text-center text-white relative overflow-hidden">
+                             <div className="absolute top-0 left-0 w-full h-full bg-white/10 animate-shine skew-x-12"></div>
+                             <h2 className="text-2xl font-bold relative z-10">Premium Membership</h2>
+                             <p className="opacity-90 relative z-10 text-sm">আনলিমিটেড অ্যাক্সেস উপভোগ করুন</p>
+                             <div className="mt-4 bg-white text-orange-600 font-extrabold text-3xl inline-block px-4 py-1 rounded-full shadow-lg relative z-10">
+                                ৳৯৯ <span className="text-sm font-medium text-gray-500">/মাস</span>
+                             </div>
+                        </div>
+                        
+                        {/* Benefits */}
+                        <div className="p-6 bg-white space-y-4 flex-1 overflow-y-auto">
+                            <ul className="space-y-3">
+                                <li className="flex items-center gap-3 text-gray-700 font-medium"><Icons.Check /> আনলিমিটেড টেমপ্লেট ব্যবহার</li>
+                                <li className="flex items-center gap-3 text-gray-700 font-medium"><Icons.Check /> কোন ওয়াটারমার্ক থাকবে না</li>
+                                <li className="flex items-center gap-3 text-gray-700 font-medium"><Icons.Check /> কোন অ্যাডের ঝামেলা নেই</li>
+                                <li className="flex items-center gap-3 text-gray-700 font-medium"><Icons.Check /> ফাস্ট সার্ভার স্পিড</li>
+                                <li className="flex items-center gap-3 text-gray-700 font-medium"><Icons.Check /> 4K হাই কোয়ালিটি ডাউনলোড</li>
+                            </ul>
+                        </div>
+                        
+                        {/* Action */}
+                        <div className="p-4 bg-gray-50 border-t">
+                             <button 
+                                onClick={() => setShowContactInfo(true)}
+                                className="w-full py-3 bg-gradient-to-r from-primary to-red-700 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transform transition active:scale-95"
+                             >
+                                এখনই কিনুন
+                             </button>
+                        </div>
+                     </>
+                   ) : (
+                     /* Contact Info View */
+                     <div className="flex flex-col h-full">
+                         <div className="bg-gray-800 text-white p-6 text-center">
+                             <h3 className="text-xl font-bold">অ্যাডমিনের সাথে যোগাযোগ করুন</h3>
+                             <p className="text-sm text-gray-400">সাবস্ক্রিপশন চালু করতে নিচে যোগাযোগ করুন</p>
+                         </div>
+                         <div className="p-6 bg-white flex flex-col items-center justify-center flex-1 space-y-6">
+                              {devInfo?.photoUrl && (
+                                  <img src={devInfo.photoUrl} className="w-24 h-24 rounded-full border-4 border-gray-200 object-cover" />
+                              )}
+                              <div className="text-center">
+                                  <h4 className="text-xl font-bold text-gray-800">{devInfo?.name || 'Admin'}</h4>
+                                  <p className="text-gray-500">{devInfo?.description}</p>
+                              </div>
+                              <div className="flex gap-4">
+                                  {devInfo?.socials?.whatsapp && <a href={devInfo.socials.whatsapp} target="_blank" className="p-3 bg-green-500 text-white rounded-full hover:bg-green-600"><svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.897.001-6.621 5.413-12.015 12.009-12.015 3.209 0 6.231 1.25 8.502 3.522 2.269 2.273 3.518 5.295 3.516 8.504 0 6.62-5.412 12.015-12.01 12.015-2.045-.002-4.049-.556-5.836-1.637l-6.279 1.672zm9.738-18.107c-3.551 0-6.44 2.889-6.44 6.44 0 3.55 2.889 6.44 6.44 6.44 3.55 0 6.44-2.89 6.44-6.44 0-3.551-2.889-6.44-6.44-6.44z"/></svg></a>}
+                                  {devInfo?.socials?.facebook && <a href={devInfo.socials.facebook} target="_blank" className="p-3 bg-blue-600 text-white rounded-full hover:bg-blue-700"><svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.791-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>}
+                                  {devInfo?.socials?.email && <a href={`mailto:${devInfo.socials.email}`} className="p-3 bg-red-500 text-white rounded-full hover:bg-red-600"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg></a>}
+                              </div>
+                              <button onClick={() => setShowContactInfo(false)} className="text-gray-400 hover:text-gray-600 text-sm underline">Back to details</button>
+                         </div>
+                     </div>
+                   )}
+              </GlassCard>
+          </div>
+      )}
+
       {/* Download Options Modal */}
       {showDownloadModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -183,14 +289,14 @@ export const CardGenerator: React.FC = () => {
                        </button>
                        
                        {/* Premium Options */}
-                       <button onClick={() => premiumUser ? processDownload('2K') : null} className={`p-3 border rounded-lg flex justify-between items-center ${premiumUser ? 'hover:bg-gray-50 cursor-pointer' : 'opacity-60 bg-gray-50 cursor-not-allowed'}`}>
+                       <button onClick={() => premiumUser ? processDownload('2K') : triggerSubscription()} className={`p-3 border rounded-lg flex justify-between items-center ${premiumUser ? 'hover:bg-gray-50 cursor-pointer' : 'bg-gray-50 opacity-90'}`}>
                            <div className="text-left"><span className="font-bold block text-gray-700">2K Resolution</span><span className="text-xs text-gray-500">Sharp (~3MB)</span></div>
-                           {premiumUser ? <span className="text-blue-500 font-bold text-sm">PRO</span> : <div className="text-xs font-bold text-gray-500 flex items-center">PREMIUM <LockIcon/></div>}
+                           {premiumUser ? <span className="text-blue-500 font-bold text-sm">PRO</span> : <div className="text-xs font-bold text-yellow-600 flex items-center bg-yellow-100 px-2 py-1 rounded"><Icons.Lock/> PREMIUM</div>}
                        </button>
 
-                       <button onClick={() => premiumUser ? processDownload('4K') : null} className={`p-3 border rounded-lg flex justify-between items-center ${premiumUser ? 'hover:bg-gray-50 cursor-pointer' : 'opacity-60 bg-gray-50 cursor-not-allowed'}`}>
+                       <button onClick={() => premiumUser ? processDownload('4K') : triggerSubscription()} className={`p-3 border rounded-lg flex justify-between items-center ${premiumUser ? 'hover:bg-gray-50 cursor-pointer' : 'bg-gray-50 opacity-90'}`}>
                            <div className="text-left"><span className="font-bold block text-gray-700">4K Ultra HD</span><span className="text-xs text-gray-500">Professional Print (~8MB)</span></div>
-                           {premiumUser ? <span className="text-blue-500 font-bold text-sm">PRO</span> : <div className="text-xs font-bold text-gray-500 flex items-center">PREMIUM <LockIcon/></div>}
+                           {premiumUser ? <span className="text-blue-500 font-bold text-sm">PRO</span> : <div className="text-xs font-bold text-yellow-600 flex items-center bg-yellow-100 px-2 py-1 rounded"><Icons.Lock/> PREMIUM</div>}
                        </button>
                    </div>
                    {!premiumUser && <p onClick={() => {setShowDownloadModal(false); setShowLoginModal(true);}} className="text-center text-xs text-primary mt-4 cursor-pointer hover:underline">Already a premium member? Login here</p>}
@@ -201,8 +307,8 @@ export const CardGenerator: React.FC = () => {
       {/* Top Bar */}
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center">
-            <Link to="/" className="text-gray-500 hover:text-primary mr-4">&larr; Back</Link>
-            <h2 className="text-xl md:text-2xl font-bold text-gray-800">Create {template.name}</h2>
+            <Link to="/" className="text-gray-500 hover:text-primary mr-4 p-2 bg-white rounded-full shadow-sm hover:shadow-md transition-all"><Icons.Back /></Link>
+            <h2 className="text-lg md:text-2xl font-bold text-gray-800 line-clamp-1">Create {template.name}</h2>
         </div>
         <div>
             {premiumUser ? (
@@ -211,9 +317,13 @@ export const CardGenerator: React.FC = () => {
                      <button onClick={handleLogout} className="text-xs text-red-500 hover:underline">Logout</button>
                 </div>
             ) : (
-                <button onClick={() => setShowLoginModal(true)} className="text-sm font-bold text-primary hover:text-red-700 flex items-center gap-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
-                    Premium Login
+                <button 
+                    onClick={() => setShowLoginModal(true)} 
+                    className="relative overflow-hidden group bg-gradient-to-r from-gold-400 via-gold-500 to-gold-600 text-white text-sm font-bold py-2 px-4 rounded-full shadow-lg hover:shadow-yellow-500/50 transition-all active:scale-95 flex items-center gap-2"
+                >
+                    <div className="absolute top-0 -inset-full h-full w-1/2 z-5 block transform -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-40 group-hover:animate-shine" />
+                    <Icons.Premium />
+                    <span>Premium Login</span>
                 </button>
             )}
         </div>
@@ -239,8 +349,7 @@ export const CardGenerator: React.FC = () => {
                     <div className="relative">
                         <input type="checkbox" className="sr-only" checked={showWatermark} onChange={() => {
                             if(!premiumUser) {
-                                alert("Watermark removal is for Premium members only.");
-                                setShowLoginModal(true);
+                                triggerSubscription();
                             } else {
                                 setShowWatermark(!showWatermark);
                             }
@@ -248,9 +357,9 @@ export const CardGenerator: React.FC = () => {
                         <div className={`block w-10 h-6 rounded-full transition-colors ${showWatermark ? 'bg-red-400' : 'bg-gray-300'}`}></div>
                         <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${showWatermark ? 'transform translate-x-4' : ''}`}></div>
                     </div>
-                    <div className="ml-3 text-gray-700 font-medium">
+                    <div className="ml-3 text-gray-700 font-medium flex items-center gap-1">
                         Watermark {showWatermark ? 'ON' : 'OFF'} 
-                        {!premiumUser && <span className="ml-1 text-xs text-gray-400">(Premium Only)</span>}
+                        {!premiumUser && <Icons.Lock />}
                     </div>
                 </label>
            </div>

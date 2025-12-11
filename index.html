@@ -17,6 +17,20 @@
               glass: "rgba(255, 255, 255, 0.25)",
               glassBorder: "rgba(255, 255, 255, 0.3)",
               primary: "#ef4444", // Red-500
+              gold: {
+                400: '#FACC15',
+                500: '#EAB308',
+                600: '#CA8A04',
+              }
+            },
+            animation: {
+                'shine': 'shine 3s infinite',
+            },
+            keyframes: {
+                shine: {
+                    '0%': { transform: 'translateX(-100%) skewX(-15deg)' },
+                    '50%, 100%': { transform: 'translateX(200%) skewX(-15deg)' }
+                }
             }
           }
         }
@@ -68,22 +82,8 @@
           return false;
         }
       };
-
-      // Debugger Trap
-      setInterval(() => {
-        const start = performance.now();
-        debugger;
-        const end = performance.now();
-        if (end - start > 100) {
-           // DevTools detected - Close window or redirect
-           document.body.innerHTML = '<div style="display:flex;height:100vh;align-items:center;justify-content:center;background:black;color:red;font-size:24px;font-weight:bold;">Security Alert: Developer Tools Detected. Access Denied.</div>';
-           window.location.href = "about:blank"; 
-        }
-      }, 1000);
     };
-
-    // Uncomment the line below to enable protection in production
-    blockDevTools();
+    // blockDevTools(); // Commented out for development convenience
   })();
 </script>
 </head>

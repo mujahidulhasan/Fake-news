@@ -1,8 +1,7 @@
-import { Asset } from '../types';
+import { Asset, DeveloperInfo } from '../types';
 import { supabase } from './supabaseClient';
 
 export const AssetService = {
-  // Get all assets
   getAll: async (): Promise<Asset[]> => {
     const { data, error } = await supabase.from('assets').select('*');
     if (error) {
@@ -18,9 +17,7 @@ export const AssetService = {
     }));
   },
 
-  // Get assets by type and specific channel (or global)
   getByChannelAndType: async (channelId: string, type: 'LOGO' | 'ADS'): Promise<Asset[]> => {
-    // Fetch global assets (channel_id is null) OR specific channel assets
     const { data, error } = await supabase
         .from('assets')
         .select('*')
@@ -40,12 +37,10 @@ export const AssetService = {
     }));
   },
   
-  // Backward compatibility
   getByType: async (type: 'LOGO' | 'ADS'): Promise<Asset[]> => {
-      return AssetService.getByChannelAndType('', type); // Likely fails to filter correctly if ID empty, mainly used in admin now
+      return AssetService.getByChannelAndType('', type); 
   },
 
-  // Add new asset
   add: async (asset: Asset): Promise<void> => {
     const { error } = await supabase.from('assets').insert({
         id: asset.id,
@@ -57,21 +52,36 @@ export const AssetService = {
     if (error) console.error('Error adding asset:', error.message);
   },
 
-  // Delete asset
   delete: async (id: string): Promise<void> => {
     const { error } = await supabase.from('assets').delete().eq('id', id);
     if (error) console.error('Error deleting asset:', error.message);
   },
 
-  // --- SYSTEM SETTINGS (Watermark) ---
-  
-  getSystemWatermark: async (): Promise<string | null> => {
-      const { data } = await supabase.from('system_settings').select('value').eq('key', 'watermark_url').single();
-      return data ? data.value : null;
+  // --- DEVELOPER INFO ---
+  getDeveloperInfo: async (): Promise<DeveloperInfo> => {
+      const { data } = await supabase.from('system_settings').select('*').in('key', ['dev_name', 'dev_desc', 'dev_photo', 'dev_socials']);
+      
+      const info: any = { socials: {} };
+      data?.forEach(item => {
+          if (item.key === 'dev_socials') {
+              try { info.socials = JSON.parse(item.value); } catch(e) { info.socials = {}; }
+          } else if(item.key === 'dev_name') info.name = item.value;
+          else if(item.key === 'dev_desc') info.description = item.value;
+          else if(item.key === 'dev_photo') info.photoUrl = item.value;
+      });
+
+      return info as DeveloperInfo;
   },
 
-  setSystemWatermark: async (url: string) => {
-      const { error } = await supabase.from('system_settings').upsert({ key: 'watermark_url', value: url });
-      if (error) console.error("Error setting watermark", error);
+  saveDeveloperInfo: async (info: DeveloperInfo) => {
+      const updates = [
+          { key: 'dev_name', value: info.name },
+          { key: 'dev_desc', value: info.description },
+          { key: 'dev_photo', value: info.photoUrl },
+          { key: 'dev_socials', value: JSON.stringify(info.socials) }
+      ];
+      
+      const { error } = await supabase.from('system_settings').upsert(updates);
+      if (error) console.error("Error saving dev info", error);
   }
 };

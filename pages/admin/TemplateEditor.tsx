@@ -40,7 +40,6 @@ const Icons = {
   ArrowDown: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>,
 };
 
-// Helper to convert file to base64
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -56,6 +55,7 @@ export const TemplateEditor: React.FC = () => {
   const [templateId, setTemplateId] = useState<string | null>(null);
   const [channelId, setChannelId] = useState('');
   const [backgroundUrl, setBackgroundUrl] = useState<string | null>(null);
+  const [watermarkUrl, setWatermarkUrl] = useState<string | null>(null); // New Template Specific Watermark
   const [boxes, setBoxes] = useState<BoxConfig[]>([]);
   const [selectedBoxId, setSelectedBoxId] = useState<string | null>(null);
   const [imgDimensions, setImgDimensions] = useState({ w: 800, h: 450 });
@@ -72,65 +72,50 @@ export const TemplateEditor: React.FC = () => {
   // Asset Management State
   const [showAssetModal, setShowAssetModal] = useState(false);
   const [assets, setAssets] = useState<Asset[]>([]);
-  const [uploadChannelId, setUploadChannelId] = useState(''); // Default to global or specific
+  const [uploadChannelId, setUploadChannelId] = useState('');
 
   // Reference Image State (Trace Layer)
   const [refImage, setRefImage] = useState<string | null>(null);
   const [refOpacity, setRefOpacity] = useState(0.4);
   
-  // Dragging State
-  const dragRef = useRef<{ 
-    id: string; 
-    mode: 'drag' | 'resize'; 
-    startX: number; 
-    startY: number; 
-    startXVal: number; 
-    startYVal: number; 
-    containerW: number;
-    containerH: number;
-  } | null>(null);
-  
+  const dragRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const loadInitialData = async () => {
-        // Load assets (all to start, we can filter view later if needed)
         const a = await AssetService.getAll();
         setAssets(a);
 
-        // Load channels
         const c = await ChannelService.getAll();
         setChannels(c);
         if (c.length > 0) setChannelId(c[0]._id);
         
-        // Load fonts
         const savedFonts = await FontService.getAll();
         setCustomFonts(prev => [...new Set([...prev, ...savedFonts.map(f => f.name)])]);
     };
     loadInitialData();
   }, []);
 
-  // AUTO LOAD Template when channel changes
   useEffect(() => {
     if (!channelId) return;
-    setUploadChannelId(channelId); // Default upload to current channel
+    setUploadChannelId(channelId);
 
     const loadTemplate = async () => {
         const templates = await TemplateService.getByChannel(channelId);
         if (templates && templates.length > 0) {
-            // Load the most recent template for this channel
             const latest = templates[0];
             setTemplateId(latest._id);
             setTemplateName(latest.name);
             setBackgroundUrl(latest.backgroundUrl);
+            setWatermarkUrl(latest.watermarkUrl || null);
             setImgDimensions({ w: latest.width, h: latest.height });
             setBoxes(latest.boxes);
             setHasSaved(true);
         } else {
-            // Reset if no template exists for this channel
             setTemplateId(null);
             setTemplateName('New Template');
             setBackgroundUrl(null);
+            setWatermarkUrl(null);
             setBoxes([]);
             setHasSaved(false);
         }
@@ -145,7 +130,6 @@ export const TemplateEditor: React.FC = () => {
       }
   }, [selectedBoxId]);
 
-  // Load image
   const handleBgUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -168,7 +152,15 @@ export const TemplateEditor: React.FC = () => {
     }
   };
 
-  // Load Reference Image
+  const handleWatermarkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if(!file) return;
+      try {
+          const base64 = await fileToBase64(file);
+          setWatermarkUrl(base64);
+      } catch(e) { alert("Error uploading watermark"); }
+  };
+
   const handleRefImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
@@ -189,15 +181,9 @@ export const TemplateEditor: React.FC = () => {
             const fontFace = new FontFace(fontName, `url("${base64}")`);
             await fontFace.load();
             document.fonts.add(fontFace);
-            
-            // Persist Font
             await FontService.saveFont(fontName, base64);
-            
             setCustomFonts(prev => [...prev, fontName]);
-        } catch (err) {
-            alert('Failed to load font. Check console.');
-            console.error(err);
-        }
+        } catch (err) { console.error(err); }
     }
   };
 
@@ -208,18 +194,15 @@ export const TemplateEditor: React.FC = () => {
               const base64 = await fileToBase64(file);
               const newAsset: Asset = {
                   id: Date.now().toString(),
-                  channelId: uploadChannelId || undefined, // Set channel if selected
+                  channelId: uploadChannelId || undefined, 
                   type,
                   name: file.name.split('.')[0],
                   url: base64
               };
               await AssetService.add(newAsset);
-              // Refresh
               const updated = await AssetService.getAll();
               setAssets(updated);
-          } catch (err) {
-              alert('Failed to upload asset.');
-          }
+          } catch (err) { alert('Failed to upload asset.'); }
       }
   };
 
@@ -229,7 +212,6 @@ export const TemplateEditor: React.FC = () => {
       setAssets(updated);
   };
 
-  // ... [Keep existing save, addBox, updateBox, etc logic unchanged] ...
   const handleSave = async () => {
     if (!backgroundUrl) {
       alert("Please upload a background image first.");
@@ -240,9 +222,10 @@ export const TemplateEditor: React.FC = () => {
 
     const newTemplate: Template = {
       _id: currentId,
-      channelId: channelId, // Use selected channel
+      channelId: channelId, 
       name: templateName,
       backgroundUrl: backgroundUrl,
+      watermarkUrl: watermarkUrl,
       width: imgDimensions.w,
       height: imgDimensions.h,
       boxes: boxes,
@@ -255,6 +238,7 @@ export const TemplateEditor: React.FC = () => {
     alert("Template Saved Successfully!");
   };
 
+  // ... (Keep existing layout logic addBox, updateBox, moveLayer, drag logic)
   const addBox = (type: BoxType) => {
     const newBox: BoxConfig = {
       id: Date.now().toString(),
@@ -300,7 +284,7 @@ export const TemplateEditor: React.FC = () => {
       const box = boxes.find(b => b.id === id);
       if (box) updateBox(id, { locked: !box.locked });
   };
-
+  
   const alignBox = (id: string, alignType: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom') => {
       const box = boxes.find(b => b.id === id);
       if (!box) return;
@@ -316,31 +300,23 @@ export const TemplateEditor: React.FC = () => {
       updateBox(id, updates);
   };
 
-  const alignText = (id: string, align: 'left' | 'center' | 'right') => {
-      updateBox(id, { align });
-  };
-  
-  const alignTextVertical = (id: string, verticalAlign: 'top' | 'middle' | 'bottom') => {
-      updateBox(id, { verticalAlign });
-  };
+  const alignText = (id: string, align: 'left' | 'center' | 'right') => { updateBox(id, { align }); };
+  const alignTextVertical = (id: string, verticalAlign: 'top' | 'middle' | 'bottom') => { updateBox(id, { verticalAlign }); };
 
-  const getClientCoords = (e: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent) => {
+  const getClientCoords = (e: any) => {
       if ('touches' in e) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
-      return { x: (e as React.MouseEvent).clientX, y: (e as React.MouseEvent).clientY };
+      return { x: e.clientX, y: e.clientY };
   };
 
-  const handleStart = (e: React.MouseEvent | React.TouchEvent, id: string, mode: 'drag' | 'resize') => {
+  const handleStart = (e: any, id: string, mode: 'drag' | 'resize') => {
     const box = boxes.find(b => b.id === id);
     if (!box || box.locked) return;
-    
     e.stopPropagation(); 
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     const coords = getClientCoords(e);
-
     dragRef.current = {
-      id, mode,
-      startX: coords.x, startY: coords.y,
+      id, mode, startX: coords.x, startY: coords.y,
       startXVal: mode === 'drag' ? box.x : box.w,
       startYVal: mode === 'drag' ? box.y : box.h,
       containerW: rect.width, containerH: rect.height
@@ -349,11 +325,10 @@ export const TemplateEditor: React.FC = () => {
     setHitBoundary(false);
   };
 
-  const handleMove = (e: React.MouseEvent | React.TouchEvent) => {
+  const handleMove = (e: any) => {
     if (!dragRef.current) return;
     const box = boxes.find(b => b.id === dragRef.current?.id);
     if (!box) return;
-
     const coords = getClientCoords(e);
     const { id, mode, startX, startY, startXVal, startYVal, containerW, containerH } = dragRef.current;
     
@@ -363,39 +338,30 @@ export const TemplateEditor: React.FC = () => {
     const dyPct = (dyPx / containerH) * 100;
 
     let hit = false;
-
     if (mode === 'drag') {
       let newX = startXVal + dxPct;
       let newY = startYVal + dyPct;
-
       if (newX < 0) { newX = 0; hit = true; }
       if (newX + box.w > 100) { newX = 100 - box.w; hit = true; }
       if (newY < 0) { newY = 0; hit = true; }
       if (newY + box.h > 100) { newY = 100 - box.h; hit = true; }
-
       updateBox(id, { x: newX, y: newY });
     } else {
       let newW = startXVal + dxPct;
       let newH = startYVal + dyPct;
-
       if (newW < 2) newW = 2;
       if (newH < 2) newH = 2;
-
       if (box.x + newW > 100) { newW = 100 - box.x; hit = true; }
       if (box.y + newH > 100) { newH = 100 - box.y; hit = true; }
-
       updateBox(id, { w: newW, h: newH });
     }
     setHitBoundary(hit);
   };
 
-  const handleEnd = () => {
-    dragRef.current = null;
-    setHitBoundary(false);
-  };
+  const handleEnd = () => { dragRef.current = null; setHitBoundary(false); };
 
   useEffect(() => {
-    const onMove = (e: MouseEvent | TouchEvent) => { if (dragRef.current) handleMove(e as any); };
+    const onMove = (e: any) => { if (dragRef.current) handleMove(e); };
     const onEnd = () => handleEnd();
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onEnd);
@@ -408,14 +374,13 @@ export const TemplateEditor: React.FC = () => {
         document.removeEventListener('touchend', onEnd);
     };
   }, [boxes]);
-
+  
   const selectedBox = boxes.find(b => b.id === selectedBoxId);
-  // Filter assets for dropdown in editor property panel (just for this channel)
   const currentChannelAssets = assets.filter(a => !a.channelId || a.channelId === channelId);
 
   return (
     <div className="h-screen flex flex-col bg-gray-100 overflow-hidden">
-      {/* --- ASSET MODAL --- */}
+      {/* ASSET MODAL */}
       {showAssetModal && (
         <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl">
@@ -467,7 +432,7 @@ export const TemplateEditor: React.FC = () => {
         </div>
       )}
 
-      {/* --- HEADER --- */}
+      {/* HEADER */}
       <div className="bg-white shadow-sm px-2 md:px-4 py-3 flex justify-between items-center z-20 shrink-0 h-16 border-b border-gray-200">
         <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
              <Link to="/admin/dashboard" className="text-gray-500 hover:text-gray-800 shrink-0"><Icons.Back /></Link>
@@ -499,7 +464,7 @@ export const TemplateEditor: React.FC = () => {
         </div>
       </div>
 
-      {/* --- CANVAS AREA (Same as before) --- */}
+      {/* CANVAS */}
       <div className="flex-1 relative bg-gray-200/50 overflow-hidden flex items-center justify-center p-4 md:p-8">
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-5">
                 <div className="w-full h-full" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
@@ -533,13 +498,15 @@ export const TemplateEditor: React.FC = () => {
                     onTouchStart={(e) => { if(e.target === e.currentTarget) setSelectedBoxId(null); }}
                 >
                     <img src={backgroundUrl} alt="Template Background" className="w-full h-full object-contain pointer-events-none block" draggable={false} />
+                    
+                    {watermarkUrl && (
+                        <div className="absolute inset-0 flex items-center justify-center opacity-40 pointer-events-none z-[1]">
+                            <img src={watermarkUrl} className="w-1/3 object-contain" />
+                        </div>
+                    )}
 
                     {refImage && (
-                        <img 
-                            src={refImage} 
-                            style={{ opacity: refOpacity }}
-                            className="absolute inset-0 w-full h-full object-contain pointer-events-none z-[1]"
-                        />
+                        <img src={refImage} style={{ opacity: refOpacity }} className="absolute inset-0 w-full h-full object-contain pointer-events-none z-[2]" />
                     )}
 
                     <div className="absolute inset-0 z-10">
@@ -580,13 +547,8 @@ export const TemplateEditor: React.FC = () => {
                                     <span className="text-[10px] uppercase font-bold text-white bg-black/50 px-1 rounded">{box.type}</span>
                                 )}
                             </div>
-
-                            {box.locked && (
-                                <div className="absolute top-0 right-0 p-0.5 bg-red-500 text-white rounded-bl shadow pointer-events-auto" onClick={(e) => {e.stopPropagation(); toggleLock(box.id);}}>
-                                    <Icons.Lock />
-                                </div>
-                            )}
-
+                            
+                            {/* Resize Handle */}
                             {selectedBoxId === box.id && !box.locked && (
                                 <div 
                                     className="absolute -bottom-2 -right-2 w-6 h-6 bg-white border-2 border-primary rounded-full shadow-md z-50 flex items-center justify-center cursor-se-resize touch-none"
@@ -602,7 +564,7 @@ export const TemplateEditor: React.FC = () => {
                 </div>
             )}
 
-            {/* FLOATING PANEL - UPDATED WITH VISUAL SELECT FOR DEFAULT VALUES */}
+            {/* FLOATING PANEL */}
             {!isPanelMinimized && (selectedBox || activeTab === 'layers') && (
                 <div className="absolute right-4 top-4 bottom-20 w-80 bg-white shadow-2xl rounded-2xl z-50 flex flex-col border border-gray-200 animate-in fade-in zoom-in-95 duration-200">
                     <div className="p-2 border-b border-gray-100 bg-gray-50/50 rounded-t-2xl backdrop-blur-sm">
@@ -616,7 +578,6 @@ export const TemplateEditor: React.FC = () => {
                     </div>
 
                     <div className="flex-1 overflow-y-auto p-5 space-y-6">
-                        {/* --- PROPERTIES --- */}
                         {activeTab === 'properties' && selectedBox && (
                             <>
                                 <div className="flex justify-between items-center mb-2">
@@ -626,8 +587,6 @@ export const TemplateEditor: React.FC = () => {
                                         <button onClick={() => deleteBox(selectedBox.id)} className="p-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 border border-transparent hover:border-red-200"><Icons.Trash /></button>
                                     </div>
                                 </div>
-                                
-                                {/* Opacity & ID */}
                                 <div className="space-y-4">
                                     <div>
                                         <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">ID Name</label>
@@ -641,25 +600,9 @@ export const TemplateEditor: React.FC = () => {
                                         <input type="range" min="0" max="1" step="0.1" value={selectedBox.opacity ?? 1} onChange={e => updateBox(selectedBox.id, { opacity: parseFloat(e.target.value) })} className="w-full h-2 bg-gray-200 rounded-lg accent-primary" />
                                     </div>
                                 </div>
-
-                                {/* VISUAL SELECT FOR LOGO/ADS in EDITOR */}
-                                {(selectedBox.type === BoxType.LOGO || selectedBox.type === BoxType.ADS) && (
-                                    <div className="pt-2">
-                                        <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">Default {selectedBox.type}</label>
-                                        <VisualSelect 
-                                            assets={currentChannelAssets.filter(a => a.type === selectedBox.type)}
-                                            selectedId={null} // Editor doesn't set value usually, but could
-                                            onChange={() => {}} // Editor preview doesn't change unless we want it to
-                                            placeholder={`Only showing ${selectedBox.type} for current channel`}
-                                        />
-                                        <p className="text-[10px] text-gray-400 mt-1">Note: This dropdown is just to verify available assets for this channel.</p>
-                                    </div>
-                                )}
-
-                                {/* Text Properties ... (Same as before) */}
+                                
                                 {selectedBox.type === BoxType.TEXT && (
                                     <div className="space-y-5 pt-4 border-t border-dashed border-gray-200">
-                                        {/* Font Family */}
                                         <div>
                                             <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">Font Family</label>
                                             <div className="flex gap-2">
@@ -670,7 +613,7 @@ export const TemplateEditor: React.FC = () => {
                                                 >
                                                     {customFonts.map(f => <option key={f} value={f}>{f}</option>)}
                                                 </select>
-                                                <label className="p-2 bg-gray-100 border border-gray-200 rounded cursor-pointer hover:bg-gray-200 text-gray-600 flex items-center justify-center w-10 shrink-0" title="Upload Font">
+                                                <label className="p-2 bg-gray-100 border border-gray-200 rounded cursor-pointer hover:bg-gray-200 text-gray-600 flex items-center justify-center w-10 shrink-0">
                                                     <Icons.Upload />
                                                     <input type="file" accept=".ttf,.otf,.woff,.woff2" className="hidden" onChange={handleFontUpload} />
                                                 </label>
@@ -678,80 +621,30 @@ export const TemplateEditor: React.FC = () => {
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-4">
-                                            {/* Font Size Input */}
                                             <div>
                                                 <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">Font Size (px)</label>
-                                                <input 
-                                                    type="number" 
-                                                    min="1"
-                                                    value={selectedBox.fontSize}
-                                                    onChange={e => updateBox(selectedBox.id, { fontSize: parseInt(e.target.value) })}
-                                                    className="w-full p-2 bg-white border border-gray-200 rounded text-sm outline-none focus:border-primary"
-                                                />
+                                                <input type="number" min="1" value={selectedBox.fontSize} onChange={e => updateBox(selectedBox.id, { fontSize: parseInt(e.target.value) })} className="w-full p-2 bg-white border border-gray-200 rounded text-sm outline-none focus:border-primary" />
                                             </div>
-
-                                            {/* Color Code Input */}
                                             <div>
                                                 <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">Color Code</label>
                                                 <div className="flex items-center gap-2">
-                                                    <input 
-                                                        type="text" 
-                                                        value={selectedBox.color}
-                                                        onChange={e => updateBox(selectedBox.id, { color: e.target.value })}
-                                                        className="w-full p-2 bg-white border border-gray-200 rounded text-sm outline-none focus:border-primary font-mono uppercase"
-                                                        placeholder="#000000"
-                                                    />
-                                                    <div 
-                                                        className="w-9 h-9 rounded border border-gray-200 shadow-sm shrink-0" 
-                                                        style={{ backgroundColor: selectedBox.color }}
-                                                    />
+                                                    <input type="text" value={selectedBox.color} onChange={e => updateBox(selectedBox.id, { color: e.target.value })} className="w-full p-2 bg-white border border-gray-200 rounded text-sm outline-none focus:border-primary font-mono uppercase" placeholder="#000000" />
+                                                    <div className="w-9 h-9 rounded border border-gray-200 shadow-sm shrink-0" style={{ backgroundColor: selectedBox.color }} />
                                                 </div>
                                             </div>
                                         </div>
-
-                                        {/* Line Height Control (New) */}
                                         <div>
-                                            <div className="flex justify-between mb-1">
-                                                <label className="text-xs font-bold text-gray-500 uppercase">Line Height</label>
-                                                <span className="text-xs text-primary font-mono">{selectedBox.lineHeight || 1.2}</span>
-                                            </div>
-                                            <input 
-                                                type="range" 
-                                                min="0.8" 
-                                                max="2.5" 
-                                                step="0.1" 
-                                                value={selectedBox.lineHeight || 1.2} 
-                                                onChange={e => updateBox(selectedBox.id, { lineHeight: parseFloat(e.target.value) })} 
-                                                className="w-full h-2 bg-gray-200 rounded-lg accent-primary" 
-                                            />
-                                        </div>
-
-                                        {/* Horizontal Alignment */}
-                                        <div>
-                                            <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">Horizontal Alignment</label>
-                                            <div className="flex bg-gray-50 border border-gray-200 rounded p-1">
+                                            <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">Alignment</label>
+                                            <div className="flex bg-gray-50 border border-gray-200 rounded p-1 mb-2">
                                                 {['left', 'center', 'right'].map((align) => (
-                                                    <button
-                                                        key={align}
-                                                        onClick={() => alignText(selectedBox.id, align as 'left')}
-                                                        className={`flex-1 py-1.5 rounded flex justify-center ${selectedBox.align === align ? 'bg-white shadow-sm text-primary' : 'text-gray-400 hover:text-gray-600'}`}
-                                                    >
+                                                    <button key={align} onClick={() => alignText(selectedBox.id, align as 'left')} className={`flex-1 py-1.5 rounded flex justify-center ${selectedBox.align === align ? 'bg-white shadow-sm text-primary' : 'text-gray-400 hover:text-gray-600'}`}>
                                                         {align === 'left' ? <Icons.AlignLeft /> : align === 'center' ? <Icons.AlignCenter /> : <Icons.AlignRight />}
                                                     </button>
                                                 ))}
                                             </div>
-                                        </div>
-
-                                        {/* Vertical Alignment */}
-                                        <div>
-                                            <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">Vertical Alignment</label>
                                             <div className="flex bg-gray-50 border border-gray-200 rounded p-1">
                                                 {['top', 'middle', 'bottom'].map((align) => (
-                                                    <button
-                                                        key={align}
-                                                        onClick={() => alignTextVertical(selectedBox.id, align as 'top' | 'middle' | 'bottom')}
-                                                        className={`flex-1 py-1.5 rounded flex justify-center ${selectedBox.verticalAlign === align ? 'bg-white shadow-sm text-primary' : 'text-gray-400 hover:text-gray-600'}`}
-                                                    >
+                                                    <button key={align} onClick={() => alignTextVertical(selectedBox.id, align as 'top')} className={`flex-1 py-1.5 rounded flex justify-center ${selectedBox.verticalAlign === align ? 'bg-white shadow-sm text-primary' : 'text-gray-400 hover:text-gray-600'}`}>
                                                         {align === 'top' ? <Icons.AlignTop /> : align === 'middle' ? <Icons.AlignMiddle /> : <Icons.AlignBottom />}
                                                     </button>
                                                 ))}
@@ -759,8 +652,6 @@ export const TemplateEditor: React.FC = () => {
                                         </div>
                                     </div>
                                 )}
-                                
-                                {/* Position Tools */}
                                 <div className="border-t border-dashed border-gray-200 pt-4 mt-2">
                                     <label className="block text-xs font-bold text-gray-500 mb-2 uppercase">Box Position</label>
                                     <div className="grid grid-cols-3 gap-2">
@@ -772,21 +663,23 @@ export const TemplateEditor: React.FC = () => {
                             </>
                         )}
 
-                        {/* --- LAYERS --- */}
                         {activeTab === 'layers' && (
                             <div>
-                                <div className="mb-4 p-3 bg-yellow-50 rounded border border-yellow-200">
-                                    <h4 className="text-xs font-bold text-yellow-800 mb-2">Reference Overlay</h4>
-                                    <div className="flex gap-2 mb-2">
+                                <div className="mb-4 p-3 bg-yellow-50 rounded border border-yellow-200 space-y-2">
+                                    <div className="flex gap-2">
                                         <label className="flex-1 text-xs bg-white border rounded p-1 text-center cursor-pointer hover:bg-gray-50">
                                             Upload Ref Image
                                             <input type="file" accept="image/*" onChange={handleRefImageUpload} className="hidden" />
                                         </label>
-                                        {refImage && <button onClick={() => setRefImage(null)} className="p-1 text-red-500 bg-white border rounded hover:bg-red-50"><Icons.Trash /></button>}
+                                        <label className="flex-1 text-xs bg-white border rounded p-1 text-center cursor-pointer hover:bg-gray-50">
+                                            {watermarkUrl ? 'Change Watermark' : 'Add Watermark'}
+                                            <input type="file" accept="image/*" onChange={handleWatermarkUpload} className="hidden" />
+                                        </label>
                                     </div>
+                                    {watermarkUrl && <div className="text-xs text-green-600 font-bold text-center">Watermark Active</div>}
                                     {refImage && (
                                         <div>
-                                            <label className="text-xs block text-yellow-700 mb-1">Opacity: {Math.round(refOpacity * 100)}%</label>
+                                            <label className="text-xs block text-yellow-700 mb-1">Ref Opacity: {Math.round(refOpacity * 100)}%</label>
                                             <input type="range" min="0" max="1" step="0.1" value={refOpacity} onChange={e => setRefOpacity(parseFloat(e.target.value))} className="w-full h-1 bg-yellow-200 rounded-lg appearance-none cursor-pointer" />
                                         </div>
                                     )}
@@ -803,9 +696,7 @@ export const TemplateEditor: React.FC = () => {
                                             <div key={box.id} onClick={() => setSelectedBoxId(box.id)} className={`p-3 rounded-lg border flex items-center justify-between cursor-pointer transition-all ${selectedBoxId === box.id ? 'bg-blue-50 border-primary shadow-sm' : 'bg-white border-gray-200 hover:border-blue-300'}`}>
                                                 <div className="flex items-center gap-3">
                                                     <span className="p-1.5 bg-gray-100 rounded text-gray-600">{box.type === 'TEXT' ? <Icons.Text /> : <Icons.Image />}</span>
-                                                    <div className="overflow-hidden">
-                                                        <p className="text-xs font-bold text-gray-700 truncate w-24">{box.key}</p>
-                                                    </div>
+                                                    <p className="text-xs font-bold text-gray-700 truncate w-24">{box.key}</p>
                                                 </div>
                                                 <div className="flex items-center gap-1">
                                                      <button onClick={(e) => { e.stopPropagation(); moveLayer(actualIndex, 'up'); }} disabled={actualIndex === boxes.length - 1} className="p-1 hover:bg-gray-200 rounded text-gray-500 disabled:opacity-30"><Icons.ArrowUp /></button>
@@ -815,7 +706,6 @@ export const TemplateEditor: React.FC = () => {
                                             </div>
                                         );
                                     })}
-                                    {boxes.length === 0 && <p className="text-center text-xs text-gray-400 mt-10">No layers added.</p>}
                                 </div>
                             </div>
                         )}
@@ -828,7 +718,7 @@ export const TemplateEditor: React.FC = () => {
             )}
       </div>
 
-      {/* --- BOTTOM TOOLBAR --- */}
+      {/* BOTTOM TOOLBAR */}
       <div className="bg-white border-t border-gray-200 p-2 shrink-0 z-30 pb-safe">
         <div className="flex justify-around items-center max-w-2xl mx-auto">
             {[{ icon: Icons.Text, label: 'Text', type: BoxType.TEXT }, { icon: Icons.Image, label: 'Image', type: BoxType.IMAGE }, { icon: Icons.Star, label: 'Logo', type: BoxType.LOGO }, { icon: Icons.Ads, label: 'Ads', type: BoxType.ADS }].map((tool, idx) => (
@@ -837,18 +727,10 @@ export const TemplateEditor: React.FC = () => {
                     <span className="text-[10px] font-medium">{tool.label}</span>
                 </button>
             ))}
-            
-            {/* Replace Background Button */}
              <label className="flex flex-col items-center justify-center w-14 h-14 text-gray-600 hover:text-primary active:scale-90 transition-transform cursor-pointer">
                 <div className="p-2 bg-gray-100 rounded-xl mb-1"><Icons.BgReplace /></div>
                 <span className="text-[10px] font-medium">BG</span>
                 <input type="file" accept="image/*" onChange={handleBgUpload} className="hidden" />
-            </label>
-
-             <label className="flex flex-col items-center justify-center w-14 h-14 text-gray-600 hover:text-primary active:scale-90 transition-transform cursor-pointer">
-                <div className="p-2 bg-gray-100 rounded-xl mb-1"><Icons.RefImage /></div>
-                <span className="text-[10px] font-medium">Ref Img</span>
-                <input type="file" accept="image/*" onChange={handleRefImageUpload} className="hidden" />
             </label>
         </div>
       </div>

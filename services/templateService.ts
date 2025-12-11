@@ -2,7 +2,6 @@ import { Template } from '../types';
 import { supabase } from './supabaseClient';
 
 export const TemplateService = {
-  // Load all templates
   getAll: async (): Promise<Template[]> => {
     const { data, error } = await supabase.from('templates').select('*');
     if (error) {
@@ -15,6 +14,7 @@ export const TemplateService = {
         channelId: t.channel_id,
         name: t.name,
         backgroundUrl: t.background_url,
+        watermarkUrl: t.watermark_url,
         width: t.width,
         height: t.height,
         boxes: t.boxes,
@@ -22,7 +22,6 @@ export const TemplateService = {
     }));
   },
 
-  // Get templates for a specific channel
   getByChannel: async (channelId: string): Promise<Template[]> => {
     const { data, error } = await supabase
         .from('templates')
@@ -40,6 +39,7 @@ export const TemplateService = {
         channelId: t.channel_id,
         name: t.name,
         backgroundUrl: t.background_url,
+        watermarkUrl: t.watermark_url,
         width: t.width,
         height: t.height,
         boxes: t.boxes,
@@ -47,7 +47,6 @@ export const TemplateService = {
     }));
   },
 
-  // Save or Update a template
   save: async (template: Template): Promise<void> => {
     const { error } = await supabase
         .from('templates')
@@ -56,6 +55,7 @@ export const TemplateService = {
             channel_id: template.channelId,
             name: template.name,
             background_url: template.backgroundUrl,
+            watermark_url: template.watermarkUrl || null,
             width: template.width,
             height: template.height,
             boxes: template.boxes,
@@ -65,7 +65,6 @@ export const TemplateService = {
     if (error) console.error('Error saving template:', error.message);
   },
 
-  // Delete a template
   delete: async (id: string): Promise<void> => {
     const { error } = await supabase.from('templates').delete().eq('_id', id);
     if (error) console.error('Error deleting template:', error.message);

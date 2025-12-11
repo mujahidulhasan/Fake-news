@@ -2,18 +2,24 @@ import React, { useState, useEffect } from 'react';
 import { GlassCard } from '../../components/GlassCard';
 import { Link } from 'react-router-dom';
 import { AssetService } from '../../services/assetService';
+import { DeveloperInfo } from '../../types';
 
 export const Settings: React.FC = () => {
     const [adminUser, setAdminUser] = useState(localStorage.getItem('admin_user') || 'Djkhan@89');
     const [adminPass, setAdminPass] = useState(localStorage.getItem('admin_pass') || 'Djkhan@89');
-    const [watermarkUrl, setWatermarkUrl] = useState<string | null>(null);
+    
+    // Dev Info
+    const [devInfo, setDevInfo] = useState<DeveloperInfo>({
+        name: '', description: '', photoUrl: '', 
+        socials: { facebook: '', whatsapp: '', email: '', youtube: '' }
+    });
 
     useEffect(() => {
-        const loadWm = async () => {
-            const wm = await AssetService.getSystemWatermark();
-            setWatermarkUrl(wm);
+        const load = async () => {
+            const info = await AssetService.getDeveloperInfo();
+            setDevInfo(info);
         };
-        loadWm();
+        load();
     }, []);
 
     const saveCredentials = () => {
@@ -22,27 +28,21 @@ export const Settings: React.FC = () => {
         alert('Credentials updated!');
     };
 
-    const resetCredentials = () => {
-        setAdminUser('Djkhan@89');
-        setAdminPass('Djkhan@89');
-        localStorage.removeItem('admin_user');
-        localStorage.removeItem('admin_pass');
-        alert('Reset to defaults.');
-    };
-
-    const handleWmUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleDevPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
             const reader = new FileReader();
-            reader.onload = async (ev) => {
-                const url = ev.target?.result as string;
-                await AssetService.setSystemWatermark(url);
-                setWatermarkUrl(url);
-                alert("Watermark uploaded successfully.");
+            reader.onload = (ev) => {
+                setDevInfo(prev => ({ ...prev, photoUrl: ev.target?.result as string }));
             };
             reader.readAsDataURL(file);
         }
     };
+
+    const saveDevInfo = async () => {
+        await AssetService.saveDeveloperInfo(devInfo);
+        alert("Developer info saved!");
+    }
 
     return (
         <div className="container mx-auto px-4 py-8">
@@ -64,25 +64,30 @@ export const Settings: React.FC = () => {
                             <label className="block text-xs font-bold text-gray-500">Admin Password</label>
                             <input className="w-full p-2 border rounded" type="text" value={adminPass} onChange={e => setAdminPass(e.target.value)} />
                         </div>
-                        <div className="flex gap-2">
-                            <button onClick={saveCredentials} className="bg-primary text-white px-4 py-2 rounded flex-1">Update</button>
-                            <button onClick={resetCredentials} className="bg-gray-200 text-gray-700 px-4 py-2 rounded flex-1">Reset Default</button>
-                        </div>
+                        <button onClick={saveCredentials} className="bg-primary text-white px-4 py-2 rounded w-full">Update</button>
                     </div>
                 </GlassCard>
 
-                {/* Watermark Settings */}
+                {/* Developer Info */}
                 <GlassCard className="p-6">
-                    <h3 className="text-lg font-bold mb-4 text-gray-700">Global Watermark Overlay</h3>
-                    <p className="text-xs text-gray-500 mb-4">This image will be overlaid on all generated cards for free users.</p>
-                    
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 flex flex-col items-center justify-center min-h-[150px]">
-                        {watermarkUrl ? (
-                            <img src={watermarkUrl} alt="Current Watermark" className="h-24 object-contain mb-2" />
-                        ) : (
-                            <span className="text-gray-400 text-sm mb-2">No watermark set</span>
-                        )}
-                        <input type="file" accept="image/*" onChange={handleWmUpload} className="text-sm text-gray-500" />
+                    <h3 className="text-lg font-bold mb-4 text-gray-700">Developer Profile (Footer)</h3>
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-4">
+                            <div className="w-16 h-16 bg-gray-100 rounded-full overflow-hidden border">
+                                {devInfo.photoUrl && <img src={devInfo.photoUrl} className="w-full h-full object-cover" />}
+                            </div>
+                            <input type="file" accept="image/*" onChange={handleDevPhotoUpload} className="text-xs" />
+                        </div>
+                        <input className="w-full p-2 border rounded text-sm" placeholder="Name" value={devInfo.name} onChange={e => setDevInfo({...devInfo, name: e.target.value})} />
+                        <textarea className="w-full p-2 border rounded text-sm" placeholder="Short Description" rows={2} value={devInfo.description} onChange={e => setDevInfo({...devInfo, description: e.target.value})} />
+                        
+                        <h4 className="text-xs font-bold text-gray-500 mt-2">Social Links</h4>
+                        <input className="w-full p-2 border rounded text-xs" placeholder="Facebook URL" value={devInfo.socials.facebook} onChange={e => setDevInfo({...devInfo, socials: {...devInfo.socials, facebook: e.target.value}})} />
+                        <input className="w-full p-2 border rounded text-xs" placeholder="WhatsApp Link" value={devInfo.socials.whatsapp} onChange={e => setDevInfo({...devInfo, socials: {...devInfo.socials, whatsapp: e.target.value}})} />
+                        <input className="w-full p-2 border rounded text-xs" placeholder="Email Address" value={devInfo.socials.email} onChange={e => setDevInfo({...devInfo, socials: {...devInfo.socials, email: e.target.value}})} />
+                        <input className="w-full p-2 border rounded text-xs" placeholder="YouTube URL" value={devInfo.socials.youtube} onChange={e => setDevInfo({...devInfo, socials: {...devInfo.socials, youtube: e.target.value}})} />
+
+                        <button onClick={saveDevInfo} className="bg-gray-800 text-white px-4 py-2 rounded w-full mt-2">Save Profile</button>
                     </div>
                 </GlassCard>
             </div>
