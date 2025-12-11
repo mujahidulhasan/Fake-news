@@ -47,15 +47,17 @@ export const CardGenerator: React.FC = () => {
   const [devInfo, setDevInfo] = useState<DeveloperInfo | null>(null);
   const [siteLogo, setSiteLogo] = useState('');
   const [siteLogoWidth, setSiteLogoWidth] = useState('150');
+  const [siteLogoPos, setSiteLogoPos] = useState('0');
 
   // Initialization
   useEffect(() => {
-    FontService.loadSavedFonts();
+    // Optimization: Load fonts non-blocking or early
+    FontService.loadSavedFonts(); 
+    
     const storedUser = localStorage.getItem('premiumUser');
     if (storedUser) {
         const user = JSON.parse(storedUser);
         setPremiumUser(user);
-        // CRITICAL: If premium, default watermark to FALSE
         setShowWatermark(false); 
     }
     const fetchSettings = async () => {
@@ -68,6 +70,7 @@ export const CardGenerator: React.FC = () => {
         } as DeveloperInfo);
         setSiteLogo(settings.siteLogo || '');
         setSiteLogoWidth(settings.siteLogoWidth || '150');
+        setSiteLogoPos(settings.siteLogoPos || '0');
     }
     fetchSettings();
   }, []);
@@ -77,15 +80,20 @@ export const CardGenerator: React.FC = () => {
     setLoading(true);
     const loadAssetsAndTemplate = async () => {
         if (channelId) {
-            const logos = await AssetService.getByChannelAndType(channelId, 'LOGO');
-            const ads = await AssetService.getByChannelAndType(channelId, 'ADS');
+            // Optimization: Parallel fetching
+            const [logos, ads, templates] = await Promise.all([
+                AssetService.getByChannelAndType(channelId, 'LOGO'),
+                AssetService.getByChannelAndType(channelId, 'ADS'),
+                TemplateService.getByChannel(channelId, 1) // Optimization: Limit to 1
+            ]);
+            
             setAssets({ logos, ads });
 
-            const templates = await TemplateService.getByChannel(channelId);
             if (templates && templates.length > 0) {
                 setTemplate(templates[0]);
             } else {
-                const defaults = await TemplateService.getByChannel('1'); 
+                // Fallback
+                const defaults = await TemplateService.getByChannel('1', 1); 
                 if (defaults.length > 0) setTemplate(defaults[0]);
             }
         }
@@ -305,32 +313,32 @@ export const CardGenerator: React.FC = () => {
 
       {/* HEADER */}
       <header className="bg-white border-b border-gray-100 sticky top-0 z-40">
-          <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-              {/* Left: Back Button & Brand */}
-              <div className="flex items-center gap-3">
-                  <Link to="/" className="text-gray-400 hover:text-gray-600 transition-colors p-2 bg-gray-50 rounded-full hover:bg-gray-100"><Icons.Back /></Link>
-                  {/* Dynamic Logo */}
-                  {siteLogo ? (
-                       <img src={siteLogo} style={{ width: `${Number(siteLogoWidth) * 0.6}px` }} className="object-contain max-h-10" alt="Logo" />
-                  ) : (
-                       <div className="flex items-center gap-3">
-                           <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-yellow-500/20">N</div>
-                           <div className="hidden md:block">
-                               <h1 className="font-bold text-gray-800 leading-tight">NewsCard Pro</h1>
-                               <p className="text-[10px] text-gray-400 font-medium">Create News in Seconds</p>
-                           </div>
-                       </div>
-                  )}
+          <div className="container mx-auto px-4 py-3 flex items-center justify-between h-16 relative">
+              {/* Logo Area */}
+              <div className="absolute inset-0 flex items-center px-4 pointer-events-none">
+                <div 
+                    className="relative transition-all duration-300 pointer-events-auto"
+                    style={{ 
+                        left: `max(0px, min(calc(100% - ${siteLogoWidth}px), ${siteLogoPos}%))`, 
+                        transform: `translateX(-${siteLogoPos}%)`
+                    }}
+                >
+                    {siteLogo ? (
+                       <img src={siteLogo} style={{ width: `${Number(siteLogoWidth) * 0.6}px` }} className="object-contain max-h-12" alt="Logo" />
+                    ) : (
+                        /* Default Branding removed as requested */
+                        <div />
+                    )}
+                </div>
               </div>
 
-              {/* Center: Search (Visual) */}
-              <div className="hidden md:flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-full border border-gray-200 w-64">
-                  <Icons.Search />
-                  <input type="text" placeholder="চ্যানেল সার্চ করুন…" className="bg-transparent border-none outline-none text-xs w-full text-gray-600 placeholder-gray-400" disabled />
+              {/* Left Controls (Back) - Z-Index higher to be clickable over logo area */}
+              <div className="relative z-10 flex items-center">
+                  <Link to="/" className="text-gray-400 hover:text-gray-600 transition-colors p-2 bg-gray-50 rounded-full hover:bg-gray-100 shadow-sm"><Icons.Back /></Link>
               </div>
 
               {/* Right: User Menu */}
-              <div className="flex items-center gap-4">
+              <div className="relative z-10 flex items-center gap-4">
                   <div className="relative" id="userWrap">
                       {premiumUser ? (
                           // LOGGED IN STATE

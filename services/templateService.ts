@@ -22,12 +22,19 @@ export const TemplateService = {
     }));
   },
 
-  getByChannel: async (channelId: string): Promise<Template[]> => {
-    const { data, error } = await supabase
+  getByChannel: async (channelId: string, limit: number = 0): Promise<Template[]> => {
+    let query = supabase
         .from('templates')
         .select('*')
         .eq('channel_id', channelId)
         .order('created_at', { ascending: false });
+
+    // Optimization: Apply limit if provided (e.g., limit 1 for generator)
+    if (limit > 0) {
+        query = query.limit(limit);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
         console.error('Error fetching templates by channel:', error.message);

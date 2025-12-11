@@ -59,7 +59,6 @@ export const AssetService = {
 
   // --- SYSTEM SETTINGS (Dev Info, Site Logo, Admin Creds) ---
   
-  // Simplified getter for all system settings
   getSystemSettings: async () => {
       const { data } = await supabase.from('system_settings').select('*');
       const settings: any = { socials: {} };
@@ -74,11 +73,11 @@ export const AssetService = {
           else if(item.key === 'admin_pass') settings.adminPass = item.value;
           else if(item.key === 'site_logo') settings.siteLogo = item.value;
           else if(item.key === 'site_logo_width') settings.siteLogoWidth = item.value;
+          else if(item.key === 'site_logo_pos') settings.siteLogoPos = item.value;
       });
       return settings;
   },
 
-  // Kept for backward compatibility with existing components
   getDeveloperInfo: async (): Promise<DeveloperInfo> => {
       const settings = await AssetService.getSystemSettings();
       return {
@@ -109,12 +108,90 @@ export const AssetService = {
       if (error) console.error("Error saving admin creds", error);
   },
 
-  saveSiteLogo: async (url: string, width: string) => {
+  saveSiteLogo: async (url: string, width: string, pos: string) => {
       const updates = [
           { key: 'site_logo', value: url },
-          { key: 'site_logo_width', value: width }
+          { key: 'site_logo_width', value: width },
+          { key: 'site_logo_pos', value: pos }
       ];
       const { error } = await supabase.from('system_settings').upsert(updates);
       if (error) console.error("Error saving site logo", error);
+  },
+
+  // --- BACKUP & RECOVERY ---
+
+  createBackup: async () => {
+      try {
+          const [channels, assets, templates, users, settings, fonts] = await Promise.all([
+              supabase.from('channels').select('*'),
+              supabase.from('assets').select('*'),
+              supabase.from('templates').select('*'),
+              supabase.from('premium_users').select('*'),
+              supabase.from('system_settings').select('*'),
+              supabase.from('fonts').select('*')
+          ]);
+
+          const backupData = {
+              version: 1,
+              timestamp: new Date().toISOString(),
+              data: {
+                  channels: channels.data || [],
+                  assets: assets.data || [],
+                  templates: templates.data || [],
+                  premium_users: users.data || [],
+                  system_settings: settings.data || [],
+                  fonts: fonts.data || []
+              }
+          };
+
+          const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `newscard_backup_${new Date().toISOString().split('T')[0]}.json`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+      } catch (e) {
+          console.error("Backup failed", e);
+          alert("Backup failed to generate.");
+      }
+  },
+
+  restoreBackup: async (file: File) => {
+      return new Promise<void>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = async (e) => {
+              try {
+                  const content = e.target?.result as string;
+                  const json = JSON.parse(content);
+                  
+                  if (!json.data) throw new Error("Invalid backup file format");
+
+                  const { channels, assets, templates, premium_users, system_settings, fonts } = json.data;
+
+                  // Restore in specific order to satisfy potential foreign keys (if strict mode was on, but Supabase usually handles upserts well)
+                  // 1. Channels
+                  if (channels?.length) await supabase.from('channels').upsert(channels);
+                  // 2. Assets
+                  if (assets?.length) await supabase.from('assets').upsert(assets);
+                  // 3. Templates
+                  if (templates?.length) await supabase.from('templates').upsert(templates);
+                  // 4. Users
+                  if (premium_users?.length) await supabase.from('premium_users').upsert(premium_users);
+                  // 5. Settings
+                  if (system_settings?.length) await supabase.from('system_settings').upsert(system_settings);
+                  // 6. Fonts
+                  if (fonts?.length) await supabase.from('fonts').upsert(fonts);
+
+                  resolve();
+              } catch (err) {
+                  reject(err);
+              }
+          };
+          reader.onerror = reject;
+          reader.readAsText(file);
+      });
   }
 };

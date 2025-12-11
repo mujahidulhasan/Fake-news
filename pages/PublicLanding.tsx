@@ -9,8 +9,11 @@ export const PublicLanding: React.FC = () => {
   const [channels, setChannels] = useState<Channel[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [devInfo, setDevInfo] = useState<DeveloperInfo | null>(null);
+  
+  // Site Logo Config
   const [siteLogo, setSiteLogo] = useState('');
   const [siteLogoWidth, setSiteLogoWidth] = useState('150');
+  const [siteLogoPos, setSiteLogoPos] = useState('0'); // 0-100
   
   const navigate = useNavigate();
 
@@ -30,6 +33,7 @@ export const PublicLanding: React.FC = () => {
         } as DeveloperInfo);
         setSiteLogo(settings.siteLogo || '');
         setSiteLogoWidth(settings.siteLogoWidth || '150');
+        setSiteLogoPos(settings.siteLogoPos || '0');
     };
     fetchChannels();
     fetchSettings();
@@ -42,17 +46,21 @@ export const PublicLanding: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-200 font-sans flex flex-col">
       {/* Navigation Bar */}
-      <nav className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-gray-200 px-4 py-3 shadow-sm">
-        <div className="container mx-auto flex justify-between items-center">
-            {siteLogo ? (
-                <img src={siteLogo} style={{ width: `${siteLogoWidth}px` }} className="object-contain max-h-12" alt="Logo" />
-            ) : (
-                <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold">N</div>
-                    <span className="font-bold text-xl text-gray-800 tracking-tight">NewsCard<span className="text-primary">Pro</span></span>
+      <nav className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-gray-200 shadow-sm relative h-16">
+        <div className="container mx-auto h-full px-4 relative flex items-center">
+            {siteLogo && (
+                <div 
+                    className="absolute top-1/2 transition-all duration-300 transform -translate-y-1/2"
+                    style={{ 
+                        width: `${siteLogoWidth}px`, 
+                        left: `max(16px, min(calc(100% - ${siteLogoWidth}px - 16px), ${siteLogoPos}%))`, 
+                        transform: `translate(-${siteLogoPos}%, -50%)`
+                    }}
+                >
+                    <img src={siteLogo} className="w-full object-contain max-h-12" alt="Logo" />
                 </div>
             )}
-            <div></div>
+            {/* If no site logo, we show nothing as requested */}
         </div>
       </nav>
 
@@ -84,7 +92,6 @@ export const PublicLanding: React.FC = () => {
         <div className="mb-8">
             <h2 className="text-2xl font-bold text-gray-800 mb-6 px-2 border-l-4 border-primary pl-3">জনপ্রিয় চ্যানেলসমূহ</h2>
             
-            {/* 2 Column Vertical Grid for Mobile, 4 for Desktop */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {filteredChannels.map((channel) => (
                 <div 
@@ -92,7 +99,6 @@ export const PublicLanding: React.FC = () => {
                     onClick={() => navigate(`/create/${channel._id}`)}
                     className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer hover:shadow-lg hover:border-primary/30 transition-all duration-300 group flex flex-col"
                 >
-                    {/* Rectangle Logo Container */}
                     <div className="aspect-video w-full bg-gray-50 flex items-center justify-center p-6 border-b border-gray-100 group-hover:bg-gray-100 transition-colors">
                          {channel.logoUrl ? (
                              <img src={channel.logoUrl} alt={channel.name} className="w-full h-full object-contain transform group-hover:scale-105 transition-transform duration-300" />
@@ -100,8 +106,6 @@ export const PublicLanding: React.FC = () => {
                              <span className="text-gray-300 font-bold text-xl">{channel.name[0]}</span>
                          )}
                     </div>
-                    
-                    {/* Channel Name Text Below */}
                     <div className="p-4 text-center">
                         <h3 className="text-lg font-bold text-gray-800 group-hover:text-primary transition-colors">{channel.name}</h3>
                         <p className="text-xs text-gray-500 mt-1 line-clamp-2">{channel.description || 'সংবাদ দেখুন'}</p>
@@ -118,7 +122,6 @@ export const PublicLanding: React.FC = () => {
         </div>
       </div>
 
-      {/* Developer Footer */}
       <footer className="bg-white border-t border-gray-200 mt-10">
           <div className="container mx-auto px-4 py-8">
               <div className="flex flex-col items-center text-center">
@@ -132,7 +135,6 @@ export const PublicLanding: React.FC = () => {
                   <p className="text-sm text-gray-500 mb-4 max-w-sm">{devInfo?.description}</p>
                   
                   <div className="flex gap-4 mb-6">
-                      {/* Social Icons */}
                       {devInfo?.socials?.facebook && <a href={devInfo.socials.facebook} target="_blank" className="text-gray-400 hover:text-blue-600"><svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.791-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>}
                       {devInfo?.socials?.whatsapp && <a href={devInfo.socials.whatsapp} target="_blank" className="text-gray-400 hover:text-green-500"><svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.897.001-6.621 5.413-12.015 12.009-12.015 3.209 0 6.231 1.25 8.502 3.522 2.269 2.273 3.518 5.295 3.516 8.504 0 6.62-5.412 12.015-12.01 12.015-2.045-.002-4.049-.556-5.836-1.637l-6.279 1.672zm9.738-18.107c-3.551 0-6.44 2.889-6.44 6.44 0 3.55 2.889 6.44 6.44 6.44 3.55 0 6.44-2.89 6.44-6.44 0-3.551-2.889-6.44-6.44-6.44z"/></svg></a>}
                       {devInfo?.socials?.youtube && <a href={devInfo.socials.youtube} target="_blank" className="text-gray-400 hover:text-red-600"><svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>}
