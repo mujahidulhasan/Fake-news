@@ -35,23 +35,28 @@ export const renderCard = async (
   const sortedBoxes = template.boxes;
 
   for (const box of sortedBoxes) {
+    // CRITICAL FIX: If box is a Watermark type and showWatermark is false, skip drawing entirely
+    if (box.type === BoxType.WATERMARK && !showWatermark) {
+        continue;
+    }
     await drawBox(ctx, box, originalW, originalH, formData, assets);
   }
 
-  // 4. Draw System Watermark (Overlay)
+  // 4. Draw System Watermark (Overlay - Legacy)
+  // Only draw if showWatermark is true AND a url exists
   if (showWatermark && watermarkUrl) {
       try {
           const wmImg = await loadImage(watermarkUrl);
+          ctx.save();
           ctx.globalAlpha = 0.5; // Semi-transparent
-          // Draw tiled or centered? Let's do centered large
           const wmW = originalW * 0.4; // 40% width
           const wmH = (wmW / wmImg.width) * wmImg.height;
           const wmX = (originalW - wmW) / 2;
           const wmY = (originalH - wmH) / 2;
           ctx.drawImage(wmImg, wmX, wmY, wmW, wmH);
-          ctx.globalAlpha = 1.0;
+          ctx.restore();
       } catch (e) {
-          console.warn("Failed to load watermark");
+          // console.warn("Failed to load watermark");
       }
   }
 };

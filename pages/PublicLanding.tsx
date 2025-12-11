@@ -9,6 +9,9 @@ export const PublicLanding: React.FC = () => {
   const [channels, setChannels] = useState<Channel[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [devInfo, setDevInfo] = useState<DeveloperInfo | null>(null);
+  const [siteLogo, setSiteLogo] = useState('');
+  const [siteLogoWidth, setSiteLogoWidth] = useState('150');
+  
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -17,12 +20,19 @@ export const PublicLanding: React.FC = () => {
         const data = await ChannelService.getAll();
         setChannels(data);
     };
-    const fetchDev = async () => {
-        const info = await AssetService.getDeveloperInfo();
-        setDevInfo(info);
+    const fetchSettings = async () => {
+        const settings = await AssetService.getSystemSettings();
+        setDevInfo({
+            name: settings.name,
+            description: settings.description,
+            photoUrl: settings.photoUrl,
+            socials: settings.socials
+        } as DeveloperInfo);
+        setSiteLogo(settings.siteLogo || '');
+        setSiteLogoWidth(settings.siteLogoWidth || '150');
     };
     fetchChannels();
-    fetchDev();
+    fetchSettings();
   }, []);
 
   const filteredChannels = channels.filter(c => 
@@ -34,10 +44,14 @@ export const PublicLanding: React.FC = () => {
       {/* Navigation Bar */}
       <nav className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-gray-200 px-4 py-3 shadow-sm">
         <div className="container mx-auto flex justify-between items-center">
-            <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold">N</div>
-                <span className="font-bold text-xl text-gray-800 tracking-tight">NewsCard<span className="text-primary">Pro</span></span>
-            </div>
+            {siteLogo ? (
+                <img src={siteLogo} style={{ width: `${siteLogoWidth}px` }} className="object-contain max-h-12" alt="Logo" />
+            ) : (
+                <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold">N</div>
+                    <span className="font-bold text-xl text-gray-800 tracking-tight">NewsCard<span className="text-primary">Pro</span></span>
+                </div>
+            )}
             <div></div>
         </div>
       </nav>

@@ -57,20 +57,36 @@ export const AssetService = {
     if (error) console.error('Error deleting asset:', error.message);
   },
 
-  // --- DEVELOPER INFO ---
-  getDeveloperInfo: async (): Promise<DeveloperInfo> => {
-      const { data } = await supabase.from('system_settings').select('*').in('key', ['dev_name', 'dev_desc', 'dev_photo', 'dev_socials']);
+  // --- SYSTEM SETTINGS (Dev Info, Site Logo, Admin Creds) ---
+  
+  // Simplified getter for all system settings
+  getSystemSettings: async () => {
+      const { data } = await supabase.from('system_settings').select('*');
+      const settings: any = { socials: {} };
       
-      const info: any = { socials: {} };
       data?.forEach(item => {
           if (item.key === 'dev_socials') {
-              try { info.socials = JSON.parse(item.value); } catch(e) { info.socials = {}; }
-          } else if(item.key === 'dev_name') info.name = item.value;
-          else if(item.key === 'dev_desc') info.description = item.value;
-          else if(item.key === 'dev_photo') info.photoUrl = item.value;
+              try { settings.socials = JSON.parse(item.value); } catch(e) { settings.socials = {}; }
+          } else if(item.key === 'dev_name') settings.name = item.value;
+          else if(item.key === 'dev_desc') settings.description = item.value;
+          else if(item.key === 'dev_photo') settings.photoUrl = item.value;
+          else if(item.key === 'admin_user') settings.adminUser = item.value;
+          else if(item.key === 'admin_pass') settings.adminPass = item.value;
+          else if(item.key === 'site_logo') settings.siteLogo = item.value;
+          else if(item.key === 'site_logo_width') settings.siteLogoWidth = item.value;
       });
+      return settings;
+  },
 
-      return info as DeveloperInfo;
+  // Kept for backward compatibility with existing components
+  getDeveloperInfo: async (): Promise<DeveloperInfo> => {
+      const settings = await AssetService.getSystemSettings();
+      return {
+          name: settings.name,
+          description: settings.description,
+          photoUrl: settings.photoUrl,
+          socials: settings.socials
+      } as DeveloperInfo;
   },
 
   saveDeveloperInfo: async (info: DeveloperInfo) => {
@@ -80,8 +96,25 @@ export const AssetService = {
           { key: 'dev_photo', value: info.photoUrl },
           { key: 'dev_socials', value: JSON.stringify(info.socials) }
       ];
-      
       const { error } = await supabase.from('system_settings').upsert(updates);
       if (error) console.error("Error saving dev info", error);
+  },
+
+  saveAdminCreds: async (user: string, pass: string) => {
+      const updates = [
+          { key: 'admin_user', value: user },
+          { key: 'admin_pass', value: pass }
+      ];
+      const { error } = await supabase.from('system_settings').upsert(updates);
+      if (error) console.error("Error saving admin creds", error);
+  },
+
+  saveSiteLogo: async (url: string, width: string) => {
+      const updates = [
+          { key: 'site_logo', value: url },
+          { key: 'site_logo_width', value: width }
+      ];
+      const { error } = await supabase.from('system_settings').upsert(updates);
+      if (error) console.error("Error saving site logo", error);
   }
 };

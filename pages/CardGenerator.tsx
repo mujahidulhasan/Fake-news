@@ -43,8 +43,10 @@ export const CardGenerator: React.FC = () => {
   const [loginUser, setLoginUser] = useState('');
   const [loginPass, setLoginPass] = useState('');
 
-  // Dev Info for purchase
+  // Dev Info & Site Config
   const [devInfo, setDevInfo] = useState<DeveloperInfo | null>(null);
+  const [siteLogo, setSiteLogo] = useState('');
+  const [siteLogoWidth, setSiteLogoWidth] = useState('150');
 
   // Initialization
   useEffect(() => {
@@ -53,13 +55,21 @@ export const CardGenerator: React.FC = () => {
     if (storedUser) {
         const user = JSON.parse(storedUser);
         setPremiumUser(user);
-        setShowWatermark(false); // Default to no watermark for premium
+        // CRITICAL: If premium, default watermark to FALSE
+        setShowWatermark(false); 
     }
-    const fetchDev = async () => {
-        const info = await AssetService.getDeveloperInfo();
-        setDevInfo(info);
+    const fetchSettings = async () => {
+        const settings = await AssetService.getSystemSettings();
+        setDevInfo({
+            name: settings.name,
+            description: settings.description,
+            photoUrl: settings.photoUrl,
+            socials: settings.socials
+        } as DeveloperInfo);
+        setSiteLogo(settings.siteLogo || '');
+        setSiteLogoWidth(settings.siteLogoWidth || '150');
     }
-    fetchDev();
+    fetchSettings();
   }, []);
 
   // Load Template and Channel Specific Assets
@@ -96,9 +106,9 @@ export const CardGenerator: React.FC = () => {
             formData, 
             assetMap, 
             1, // Preview scale
-            // If showWatermark is TRUE, we pass the URL. If FALSE, we pass null to disable it.
+            // If showWatermark is TRUE, pass URL. If FALSE, pass null.
             showWatermark ? (template.watermarkUrl || null) : null, 
-            showWatermark
+            showWatermark // Pass boolean to force hide boxes if false
         );
     }
   }, [template, formData, assets, showWatermark, premiumUser]);
@@ -114,7 +124,7 @@ export const CardGenerator: React.FC = () => {
           localStorage.setItem('premiumUser', JSON.stringify(user));
           setPremiumUser(user);
           setShowLoginModal(false);
-          setShowWatermark(false);
+          setShowWatermark(false); // Turn off watermark immediately on login
       } else {
           alert("Invalid credentials or expired subscription.");
       }
@@ -137,9 +147,7 @@ export const CardGenerator: React.FC = () => {
               return;
           }
           await UserService.incrementQuota(premiumUser.id);
-          // Update local state quota count for UI
           setPremiumUser({...premiumUser, quota_used: premiumUser.quota_used + 1});
-          // Update local storage to reflect quota change immediately in UI if reloaded
           localStorage.setItem('premiumUser', JSON.stringify({...premiumUser, quota_used: premiumUser.quota_used + 1}));
       }
 
@@ -193,30 +201,8 @@ export const CardGenerator: React.FC = () => {
   if (loading) {
       return (
         <div className="container mx-auto px-4 py-6 animate-pulse">
-            <div className="flex justify-between items-center mb-6">
-                 <div className="flex items-center gap-4">
-                     <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
-                     <div className="h-8 w-48 bg-gray-200 rounded"></div>
-                 </div>
-                 <div className="h-10 w-32 bg-gray-200 rounded-xl"></div>
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2 space-y-4">
-                    <div className="w-full aspect-video bg-gray-200 rounded-2xl"></div>
-                    <div className="h-6 w-32 bg-gray-200 rounded mx-auto mt-4"></div>
-                </div>
-                <div className="lg:col-span-1">
-                    <div className="h-[500px] bg-white border border-gray-100 rounded-2xl p-6 space-y-6">
-                         <div className="h-6 w-40 bg-gray-200 rounded mb-6"></div>
-                         <div className="space-y-4">
-                            <div className="h-10 w-full bg-gray-100 rounded"></div>
-                            <div className="h-20 w-full bg-gray-100 rounded"></div>
-                            <div className="h-10 w-full bg-gray-100 rounded"></div>
-                         </div>
-                         <div className="h-12 w-full bg-gray-200 rounded mt-12"></div>
-                    </div>
-                </div>
-            </div>
+             <div className="h-16 bg-gray-200 rounded mb-4"></div>
+             <div className="h-96 bg-gray-200 rounded"></div>
         </div>
       );
   }
@@ -235,61 +221,33 @@ export const CardGenerator: React.FC = () => {
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
               <div className="w-full max-w-sm p-8 bg-white rounded-2xl shadow-2xl relative animate-in zoom-in-95">
                   <button onClick={() => setShowLoginModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition-colors">✕</button>
-                  
                   <div className="text-center mb-6">
-                      <div className="w-12 h-12 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                          <Icons.Lock />
-                      </div>
+                      <div className="w-12 h-12 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-3"><Icons.Lock /></div>
                       <h2 className="text-2xl font-bold text-gray-900">Premium Login</h2>
                       <p className="text-sm text-gray-500">Access exclusive features</p>
                   </div>
-
                   <form onSubmit={handleLogin} className="space-y-4">
-                      <div>
-                          <input 
-                            type="text" 
-                            placeholder="Username" 
-                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-yellow-400 focus:border-transparent outline-none transition-all bg-gray-50 focus:bg-white text-gray-900" 
-                            value={loginUser} 
-                            onChange={e => setLoginUser(e.target.value)} 
-                          />
-                      </div>
-                      <div>
-                          <input 
-                            type="password" 
-                            placeholder="Password" 
-                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-yellow-400 focus:border-transparent outline-none transition-all bg-gray-50 focus:bg-white text-gray-900" 
-                            value={loginPass} 
-                            onChange={e => setLoginPass(e.target.value)} 
-                          />
-                      </div>
-                      <button type="submit" className="w-full py-3.5 bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-xl font-bold hover:shadow-lg hover:scale-[1.02] transition-all transform text-sm uppercase tracking-wide">
-                          Unlock Premium
-                      </button>
+                      <input type="text" placeholder="Username" className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none bg-gray-50 focus:bg-white focus:ring-2 focus:ring-yellow-400" value={loginUser} onChange={e => setLoginUser(e.target.value)} />
+                      <input type="password" placeholder="Password" className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none bg-gray-50 focus:bg-white focus:ring-2 focus:ring-yellow-400" value={loginPass} onChange={e => setLoginPass(e.target.value)} />
+                      <button type="submit" className="w-full py-3.5 bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-xl font-bold hover:shadow-lg transform active:scale-95 transition-all text-sm uppercase tracking-wide">Unlock Premium</button>
                   </form>
               </div>
           </div>
       )}
 
-      {/* Subscription/Purchase Modal (Bangla) */}
+      {/* Subscription Modal */}
       {showSubscriptionModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
               <div className="w-full max-w-md bg-white rounded-2xl overflow-hidden shadow-2xl relative flex flex-col max-h-[90vh] animate-in zoom-in-95">
                    <button onClick={() => setShowSubscriptionModal(false)} className="absolute top-3 right-3 text-white z-20 bg-black/20 rounded-full p-1 hover:bg-red-500 transition-colors">✕</button>
-                   
                    {!showContactInfo ? (
                      <>
-                        {/* Header */}
                         <div className="bg-gradient-to-br from-yellow-400 to-orange-500 p-8 text-center text-white relative overflow-hidden">
                              <div className="absolute top-0 left-0 w-full h-full bg-white/10 animate-shine skew-x-12"></div>
                              <h2 className="text-2xl font-bold relative z-10 font-sans">Premium Membership</h2>
                              <p className="opacity-90 relative z-10 text-sm mt-1">আনলিমিটেড অ্যাক্সেস উপভোগ করুন</p>
-                             <div className="mt-5 bg-white text-orange-600 font-extrabold text-3xl inline-block px-6 py-2 rounded-full shadow-xl relative z-10">
-                                ৳৯৯ <span className="text-sm font-medium text-gray-500">/মাস</span>
-                             </div>
+                             <div className="mt-5 bg-white text-orange-600 font-extrabold text-3xl inline-block px-6 py-2 rounded-full shadow-xl relative z-10">৳৯৯ <span className="text-sm font-medium text-gray-500">/মাস</span></div>
                         </div>
-                        
-                        {/* Benefits */}
                         <div className="p-8 bg-white space-y-4 flex-1 overflow-y-auto">
                             <ul className="space-y-4">
                                 <li className="flex items-center gap-3 text-gray-700 font-medium"><div className="p-1 bg-green-100 rounded-full text-green-600"><Icons.Check /></div> আনলিমিটেড টেমপ্লেট ব্যবহার</li>
@@ -299,36 +257,25 @@ export const CardGenerator: React.FC = () => {
                                 <li className="flex items-center gap-3 text-gray-700 font-medium"><div className="p-1 bg-green-100 rounded-full text-green-600"><Icons.Check /></div> 4K হাই কোয়ালিটি ডাউনলোড</li>
                             </ul>
                         </div>
-                        
-                        {/* Action */}
                         <div className="p-6 bg-gray-50 border-t border-gray-100">
-                             <button 
-                                onClick={() => setShowContactInfo(true)}
-                                className="w-full py-3.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-red-500/30 hover:scale-[1.02] transform transition-all"
-                             >
-                                এখনই কিনুন
-                             </button>
+                             <button onClick={() => setShowContactInfo(true)} className="w-full py-3.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-red-500/30 hover:scale-[1.02] transform transition-all">এখনই কিনুন</button>
                         </div>
                      </>
                    ) : (
-                     /* Contact Info View */
                      <div className="flex flex-col h-full">
                          <div className="bg-gray-900 text-white p-8 text-center">
                              <h3 className="text-xl font-bold">অ্যাডমিনের সাথে যোগাযোগ করুন</h3>
                              <p className="text-sm text-gray-400 mt-1">সাবস্ক্রিপশন চালু করতে নিচে যোগাযোগ করুন</p>
                          </div>
                          <div className="p-8 bg-white flex flex-col items-center justify-center flex-1 space-y-6">
-                              {devInfo?.photoUrl && (
-                                  <img src={devInfo.photoUrl} className="w-24 h-24 rounded-full border-4 border-white shadow-xl object-cover" />
-                              )}
+                              {devInfo?.photoUrl && <img src={devInfo.photoUrl} className="w-24 h-24 rounded-full border-4 border-white shadow-xl object-cover" />}
                               <div className="text-center">
                                   <h4 className="text-xl font-bold text-gray-900">{devInfo?.name || 'Admin'}</h4>
                                   <p className="text-gray-500">{devInfo?.description}</p>
                               </div>
                               <div className="flex gap-4">
-                                  {devInfo?.socials?.whatsapp && <a href={devInfo.socials.whatsapp} target="_blank" className="p-3 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors shadow-lg shadow-green-500/30"><svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.897.001-6.621 5.413-12.015 12.009-12.015 3.209 0 6.231 1.25 8.502 3.522 2.269 2.273 3.518 5.295 3.516 8.504 0 6.62-5.412 12.015-12.01 12.015-2.045-.002-4.049-.556-5.836-1.637l-6.279 1.672zm9.738-18.107c-3.551 0-6.44 2.889-6.44 6.44 0 3.55 2.889 6.44 6.44 6.44 3.55 0 6.44-2.89 6.44-6.44 0-3.551-2.889-6.44-6.44-6.44z"/></svg></a>}
-                                  {devInfo?.socials?.facebook && <a href={devInfo.socials.facebook} target="_blank" className="p-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/30"><svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.791-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>}
-                                  {devInfo?.socials?.email && <a href={`mailto:${devInfo.socials.email}`} className="p-3 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg shadow-red-500/30"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg></a>}
+                                  {devInfo?.socials?.whatsapp && <a href={devInfo.socials.whatsapp} target="_blank" className="p-3 bg-green-500 text-white rounded-full hover:bg-green-600 shadow-lg"><svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.897.001-6.621 5.413-12.015 12.009-12.015 3.209 0 6.231 1.25 8.502 3.522 2.269 2.273 3.518 5.295 3.516 8.504 0 6.62-5.412 12.015-12.01 12.015-2.045-.002-4.049-.556-5.836-1.637l-6.279 1.672zm9.738-18.107c-3.551 0-6.44 2.889-6.44 6.44 0 3.55 2.889 6.44 6.44 6.44 3.55 0 6.44-2.89 6.44-6.44 0-3.551-2.889-6.44-6.44-6.44z"/></svg></a>}
+                                  {devInfo?.socials?.facebook && <a href={devInfo.socials.facebook} target="_blank" className="p-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 shadow-lg"><svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.791-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>}
                               </div>
                               <button onClick={() => setShowContactInfo(false)} className="text-gray-400 hover:text-gray-600 text-sm underline">Back to details</button>
                          </div>
@@ -345,27 +292,11 @@ export const CardGenerator: React.FC = () => {
                    <button onClick={() => setShowDownloadModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition-colors">✕</button>
                    <h3 className="text-xl font-bold mb-1 text-center text-gray-800">Select Quality</h3>
                    <p className="text-center text-sm text-gray-500 mb-6">Choose resolution for your news card</p>
-                   
                    <div className="grid grid-cols-1 gap-3">
-                       <button onClick={() => processDownload('SD')} className="p-4 border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all flex justify-between items-center group">
-                           <div className="text-left"><span className="font-bold block text-gray-800">Standard (SD)</span><span className="text-xs text-gray-500">Fast, Lower Quality (~500KB)</span></div>
-                           <span className="text-green-600 font-bold text-xs bg-green-50 px-2 py-1 rounded">FREE</span>
-                       </button>
-                       <button onClick={() => processDownload('HD')} className="p-4 border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all flex justify-between items-center group">
-                           <div className="text-left"><span className="font-bold block text-gray-800">High Definition (HD)</span><span className="text-xs text-gray-500">Good for Social Media (~1.5MB)</span></div>
-                           <span className="text-green-600 font-bold text-xs bg-green-50 px-2 py-1 rounded">FREE</span>
-                       </button>
-                       
-                       {/* Premium Options */}
-                       <button onClick={() => premiumUser ? processDownload('2K') : triggerSubscription()} className={`p-4 border rounded-xl flex justify-between items-center transition-all ${premiumUser ? 'hover:bg-blue-50 border-blue-100 hover:border-blue-300 cursor-pointer' : 'bg-gray-50 border-gray-100 opacity-80'}`}>
-                           <div className="text-left"><span className="font-bold block text-gray-800">2K Resolution</span><span className="text-xs text-gray-500">Sharp Details (~3MB)</span></div>
-                           {premiumUser ? <span className="text-blue-600 font-bold text-xs bg-blue-50 px-2 py-1 rounded">PRO</span> : <div className="text-[10px] font-bold text-yellow-700 flex items-center gap-1 bg-yellow-100 px-2 py-1 rounded"><Icons.Lock/> PREMIUM</div>}
-                       </button>
-
-                       <button onClick={() => premiumUser ? processDownload('4K') : triggerSubscription()} className={`p-4 border rounded-xl flex justify-between items-center transition-all ${premiumUser ? 'hover:bg-blue-50 border-blue-100 hover:border-blue-300 cursor-pointer' : 'bg-gray-50 border-gray-100 opacity-80'}`}>
-                           <div className="text-left"><span className="font-bold block text-gray-800">4K Ultra HD</span><span className="text-xs text-gray-500">Professional Print (~8MB)</span></div>
-                           {premiumUser ? <span className="text-blue-600 font-bold text-xs bg-blue-50 px-2 py-1 rounded">PRO</span> : <div className="text-[10px] font-bold text-yellow-700 flex items-center gap-1 bg-yellow-100 px-2 py-1 rounded"><Icons.Lock/> PREMIUM</div>}
-                       </button>
+                       <button onClick={() => processDownload('SD')} className="p-4 border border-gray-200 rounded-xl hover:bg-gray-50 flex justify-between items-center group"><div className="text-left"><span className="font-bold block text-gray-800">Standard (SD)</span><span className="text-xs text-gray-500">Fast, Lower Quality (~500KB)</span></div><span className="text-green-600 font-bold text-xs bg-green-50 px-2 py-1 rounded">FREE</span></button>
+                       <button onClick={() => processDownload('HD')} className="p-4 border border-gray-200 rounded-xl hover:bg-gray-50 flex justify-between items-center group"><div className="text-left"><span className="font-bold block text-gray-800">High Definition (HD)</span><span className="text-xs text-gray-500">Good for Social Media (~1.5MB)</span></div><span className="text-green-600 font-bold text-xs bg-green-50 px-2 py-1 rounded">FREE</span></button>
+                       <button onClick={() => premiumUser ? processDownload('2K') : triggerSubscription()} className={`p-4 border rounded-xl flex justify-between items-center transition-all ${premiumUser ? 'hover:bg-blue-50 border-blue-100 hover:border-blue-300 cursor-pointer' : 'bg-gray-50 border-gray-100 opacity-80'}`}><div className="text-left"><span className="font-bold block text-gray-800">2K Resolution</span><span className="text-xs text-gray-500">Sharp Details (~3MB)</span></div>{premiumUser ? <span className="text-blue-600 font-bold text-xs bg-blue-50 px-2 py-1 rounded">PRO</span> : <div className="text-[10px] font-bold text-yellow-700 flex items-center gap-1 bg-yellow-100 px-2 py-1 rounded"><Icons.Lock/> PREMIUM</div>}</button>
+                       <button onClick={() => premiumUser ? processDownload('4K') : triggerSubscription()} className={`p-4 border rounded-xl flex justify-between items-center transition-all ${premiumUser ? 'hover:bg-blue-50 border-blue-100 hover:border-blue-300 cursor-pointer' : 'bg-gray-50 border-gray-100 opacity-80'}`}><div className="text-left"><span className="font-bold block text-gray-800">4K Ultra HD</span><span className="text-xs text-gray-500">Professional Print (~8MB)</span></div>{premiumUser ? <span className="text-blue-600 font-bold text-xs bg-blue-50 px-2 py-1 rounded">PRO</span> : <div className="text-[10px] font-bold text-yellow-700 flex items-center gap-1 bg-yellow-100 px-2 py-1 rounded"><Icons.Lock/> PREMIUM</div>}</button>
                    </div>
                    {!premiumUser && <p onClick={() => {setShowDownloadModal(false); setShowLoginModal(true);}} className="text-center text-xs text-blue-500 mt-6 cursor-pointer hover:underline font-medium">Already a premium member? Login here</p>}
               </div>
@@ -375,13 +306,21 @@ export const CardGenerator: React.FC = () => {
       {/* HEADER */}
       <header className="bg-white border-b border-gray-100 sticky top-0 z-40">
           <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-              {/* Left: Brand */}
+              {/* Left: Back Button & Brand */}
               <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-yellow-500/20">ফ</div>
-                  <div className="hidden md:block">
-                      <h1 className="font-bold text-gray-800 leading-tight">NewsCard Pro</h1>
-                      <p className="text-[10px] text-gray-400 font-medium">Create News in Seconds</p>
-                  </div>
+                  <Link to="/" className="text-gray-400 hover:text-gray-600 transition-colors p-2 bg-gray-50 rounded-full hover:bg-gray-100"><Icons.Back /></Link>
+                  {/* Dynamic Logo */}
+                  {siteLogo ? (
+                       <img src={siteLogo} style={{ width: `${Number(siteLogoWidth) * 0.6}px` }} className="object-contain max-h-10" alt="Logo" />
+                  ) : (
+                       <div className="flex items-center gap-3">
+                           <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-yellow-500/20">N</div>
+                           <div className="hidden md:block">
+                               <h1 className="font-bold text-gray-800 leading-tight">NewsCard Pro</h1>
+                               <p className="text-[10px] text-gray-400 font-medium">Create News in Seconds</p>
+                           </div>
+                       </div>
+                  )}
               </div>
 
               {/* Center: Search (Visual) */}
@@ -392,11 +331,6 @@ export const CardGenerator: React.FC = () => {
 
               {/* Right: User Menu */}
               <div className="flex items-center gap-4">
-                  <Link to="/" className="text-gray-400 hover:text-gray-600 transition-colors p-2 bg-gray-50 rounded-full">
-                      <Icons.Back />
-                  </Link>
-
-                  {/* PREMIUM / USER AREA */}
                   <div className="relative" id="userWrap">
                       {premiumUser ? (
                           // LOGGED IN STATE
@@ -427,7 +361,6 @@ export const CardGenerator: React.FC = () => {
                                               <p className="text-xs text-gray-500">Premium Member</p>
                                           </div>
                                       </div>
-                                      
                                       <div className="p-2 mb-2">
                                           <div className="flex justify-between text-xs mb-1">
                                               <span className="text-gray-500">Quota Used</span>
@@ -437,33 +370,20 @@ export const CardGenerator: React.FC = () => {
                                               <div className="h-full bg-green-500 rounded-full" style={{ width: `${Math.min((premiumUser.quota_used / premiumUser.quota_limit) * 100, 100)}%` }}></div>
                                           </div>
                                       </div>
-
                                       <div className="flex items-center justify-between p-2 rounded-lg bg-orange-50/50 border border-orange-100 mb-2">
                                           <div className="text-xs">
                                               <span className="block text-gray-500">Expires On</span>
                                               <span className="font-bold text-gray-800">{formatDate(premiumUser.end_date)}</span>
                                           </div>
                                       </div>
-
-                                      <button 
-                                        onClick={handleLogout}
-                                        className="w-full py-2 bg-gray-900 text-white text-xs font-bold rounded-lg hover:bg-gray-800 transition-colors"
-                                      >
-                                          Log Out
-                                      </button>
+                                      <button onClick={handleLogout} className="w-full py-2 bg-gray-900 text-white text-xs font-bold rounded-lg hover:bg-gray-800 transition-colors">Log Out</button>
                                   </div>
                               )}
                           </div>
                       ) : (
-                          // LOGGED OUT STATE - Premium Button
-                          <button 
-                              onClick={() => setShowLoginModal(true)} 
-                              className="premium-btn group"
-                              title="Premium Login"
-                          >
-                              <span className="premium-ico group-hover:scale-110 transition-transform duration-200">
-                                  <Icons.Premium />
-                              </span>
+                          // LOGGED OUT STATE
+                          <button onClick={() => setShowLoginModal(true)} className="premium-btn group" title="Premium Login">
+                              <span className="premium-ico group-hover:scale-110 transition-transform duration-200"><Icons.Premium /></span>
                           </button>
                       )}
                   </div>
@@ -477,12 +397,8 @@ export const CardGenerator: React.FC = () => {
             <div className="lg:col-span-2 space-y-4">
             <GlassCard className="p-2 flex flex-col items-center justify-center bg-gray-200 overflow-hidden relative group">
                 <div className="absolute inset-0 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:16px_16px] opacity-50"></div>
-                {/* Dynamic Aspect Ratio Box */}
                 <div className="relative w-full z-10 transition-transform duration-300" style={{ aspectRatio: `${template.width} / ${template.height}` }}>
-                    <canvas 
-                        ref={canvasRef}
-                        className="absolute top-0 left-0 w-full h-full shadow-2xl rounded-lg bg-white"
-                    />
+                    <canvas ref={canvasRef} className="absolute top-0 left-0 w-full h-full shadow-2xl rounded-lg bg-white" />
                 </div>
             </GlassCard>
             
@@ -493,12 +409,12 @@ export const CardGenerator: React.FC = () => {
                         <input 
                             type="checkbox" 
                             className="sr-only peer" 
-                            checked={!showWatermark} // Checkbox represents "No Watermark"
+                            checked={!showWatermark} 
                             onChange={() => {
                                 if(!premiumUser) {
                                     triggerSubscription();
                                 } else {
-                                    setShowWatermark(!showWatermark); // Toggle state
+                                    setShowWatermark(!showWatermark);
                                 }
                             }} 
                         />
@@ -520,7 +436,6 @@ export const CardGenerator: React.FC = () => {
                     <span className="w-1 h-6 bg-red-500 rounded-full"></span>
                     Customize Content
                 </h3>
-                
                 <div className="space-y-5">
                 {template.boxes.map(box => {
                     if (box.type === BoxType.WATERMARK) return null; 
@@ -531,7 +446,6 @@ export const CardGenerator: React.FC = () => {
                         <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wide">
                             {box.key.replace(/_/g, ' ')}
                         </label>
-                        
                         {box.type === BoxType.TEXT && (
                             <textarea
                                 className="w-full p-3 rounded-xl bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-red-100 focus:border-red-400 outline-none resize-y min-h-[80px] text-sm transition-all shadow-sm"
@@ -540,26 +454,15 @@ export const CardGenerator: React.FC = () => {
                                 rows={3}
                             />
                         )}
-
                         {box.type === BoxType.IMAGE && (
                             <label className="flex items-center gap-3 p-3 border border-dashed border-gray-300 rounded-xl cursor-pointer hover:bg-gray-50 hover:border-red-300 transition-all bg-white">
                                 <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 group-hover:text-red-500 transition-colors">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                                 </div>
                                 <span className="text-sm text-gray-600 font-medium">Click to upload image</span>
-                                <input 
-                                    type="file" 
-                                    accept="image/*"
-                                    className="hidden"
-                                    onChange={(e) => {
-                                        if (e.target.files?.[0]) {
-                                            handleInputChange(box.key, e.target.files[0]);
-                                        }
-                                    }}
-                                />
+                                <input type="file" accept="image/*" className="hidden" onChange={(e) => { if (e.target.files?.[0]) handleInputChange(box.key, e.target.files[0]); }} />
                             </label>
                         )}
-                        
                         {(box.type === BoxType.LOGO || box.type === BoxType.ADS) && !box.staticUrl && (
                             <VisualSelect 
                                 placeholder={`Select ${box.type === BoxType.LOGO ? 'Logo' : 'Ad'}...`}
@@ -571,7 +474,6 @@ export const CardGenerator: React.FC = () => {
                     </div>
                     );
                 })}
-
                 <button 
                     onClick={() => setShowDownloadModal(true)}
                     disabled={generating}

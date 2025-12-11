@@ -1,31 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { GlassCard } from '../../components/GlassCard';
-
-const DEFAULT_USER = "Djkhan@89";
-const DEFAULT_PASS = "Djkhan@89";
+import { AssetService } from '../../services/assetService';
 
 export const AdminLogin: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-      // Security: Clear token when landing on login page to ensure no one bypasses login via back button or history
+      // Security: Clear token when landing on login page
       localStorage.removeItem('adminToken');
   }, []);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     
-    const storedUser = localStorage.getItem('admin_user') || DEFAULT_USER;
-    const storedPass = localStorage.getItem('admin_pass') || DEFAULT_PASS;
+    try {
+        const settings = await AssetService.getSystemSettings();
+        // Fallback to default if DB is empty or connection fails
+        const validUser = settings.adminUser || "Djkhan@89";
+        const validPass = settings.adminPass || "Djkhan@89";
 
-    if (username === storedUser && password === storedPass) {
-        localStorage.setItem('adminToken', 'active');
-        navigate('/admin/dashboard', { replace: true });
-    } else {
-        alert('Invalid credentials.');
+        if (username === validUser && password === validPass) {
+            localStorage.setItem('adminToken', 'active');
+            navigate('/admin/dashboard', { replace: true });
+        } else {
+            alert('Invalid credentials.');
+        }
+    } catch (err) {
+        alert('Login failed. Please check connection.');
+    } finally {
+        setLoading(false);
     }
   };
 
@@ -59,8 +66,8 @@ export const AdminLogin: React.FC = () => {
                     required
                 />
             </div>
-            <button type="submit" className="w-full bg-gradient-to-r from-red-500 to-red-600 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-red-500/30 hover:shadow-xl hover:scale-[1.02] transition-all">
-                Access Dashboard
+            <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-red-500 to-red-600 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-red-500/30 hover:shadow-xl hover:scale-[1.02] transition-all disabled:opacity-70">
+                {loading ? 'Verifying...' : 'Access Dashboard'}
             </button>
         </form>
       </div>

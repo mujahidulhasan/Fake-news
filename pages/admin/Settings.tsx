@@ -5,9 +5,13 @@ import { AssetService } from '../../services/assetService';
 import { DeveloperInfo } from '../../types';
 
 export const Settings: React.FC = () => {
-    const [adminUser, setAdminUser] = useState(localStorage.getItem('admin_user') || 'Djkhan@89');
-    const [adminPass, setAdminPass] = useState(localStorage.getItem('admin_pass') || 'Djkhan@89');
+    const [adminUser, setAdminUser] = useState('');
+    const [adminPass, setAdminPass] = useState('');
     
+    // Site Logo
+    const [siteLogo, setSiteLogo] = useState('');
+    const [siteLogoWidth, setSiteLogoWidth] = useState('150');
+
     // Dev Info
     const [devInfo, setDevInfo] = useState<DeveloperInfo>({
         name: '', description: '', photoUrl: '', 
@@ -16,16 +20,46 @@ export const Settings: React.FC = () => {
 
     useEffect(() => {
         const load = async () => {
-            const info = await AssetService.getDeveloperInfo();
-            setDevInfo(info);
+            const settings = await AssetService.getSystemSettings();
+            
+            // Load Admin Creds
+            setAdminUser(settings.adminUser || 'Djkhan@89');
+            setAdminPass(settings.adminPass || 'Djkhan@89');
+
+            // Load Site Logo
+            setSiteLogo(settings.siteLogo || '');
+            setSiteLogoWidth(settings.siteLogoWidth || '150');
+
+            // Load Dev Info
+            setDevInfo({
+                name: settings.name || '',
+                description: settings.description || '',
+                photoUrl: settings.photoUrl || '',
+                socials: settings.socials || {}
+            });
         };
         load();
     }, []);
 
-    const saveCredentials = () => {
-        localStorage.setItem('admin_user', adminUser);
-        localStorage.setItem('admin_pass', adminPass);
-        alert('Credentials updated!');
+    const saveCredentials = async () => {
+        await AssetService.saveAdminCreds(adminUser, adminPass);
+        alert('Admin Credentials updated in Database!');
+    };
+
+    const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                setSiteLogo(ev.target?.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const saveSiteConfig = async () => {
+        await AssetService.saveSiteLogo(siteLogo, siteLogoWidth);
+        alert('Site Configuration Saved!');
     };
 
     const handleDevPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,7 +85,7 @@ export const Settings: React.FC = () => {
                 <h1 className="text-2xl font-bold text-gray-800">System Settings</h1>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {/* Admin Credentials */}
                 <GlassCard className="p-6">
                     <h3 className="text-lg font-bold mb-4 text-gray-700">Admin Security</h3>
@@ -64,13 +98,46 @@ export const Settings: React.FC = () => {
                             <label className="block text-xs font-bold text-gray-500">Admin Password</label>
                             <input className="w-full p-2 border rounded" type="text" value={adminPass} onChange={e => setAdminPass(e.target.value)} />
                         </div>
-                        <button onClick={saveCredentials} className="bg-primary text-white px-4 py-2 rounded w-full">Update</button>
+                        <button onClick={saveCredentials} className="bg-red-500 text-white px-4 py-2 rounded w-full font-bold">Update Login</button>
+                    </div>
+                </GlassCard>
+
+                {/* Site Configuration (Logo) */}
+                <GlassCard className="p-6">
+                    <h3 className="text-lg font-bold mb-4 text-gray-700">Site Branding</h3>
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 mb-2">Header Logo</label>
+                            <div className="bg-gray-100 p-4 rounded-lg flex items-center justify-center mb-2 border border-dashed border-gray-300">
+                                {siteLogo ? (
+                                    <img src={siteLogo} style={{ width: `${siteLogoWidth}px` }} className="object-contain" />
+                                ) : (
+                                    <span className="text-gray-400 text-sm">No Logo Uploaded</span>
+                                )}
+                            </div>
+                            <input type="file" accept="image/*" onChange={handleLogoUpload} className="w-full text-xs" />
+                        </div>
+                        
+                        <div>
+                            <div className="flex justify-between">
+                                <label className="block text-xs font-bold text-gray-500">Logo Width (px)</label>
+                                <span className="text-xs font-mono">{siteLogoWidth}px</span>
+                            </div>
+                            <input 
+                                type="range" min="30" max="300" 
+                                value={siteLogoWidth} 
+                                onChange={e => setSiteLogoWidth(e.target.value)} 
+                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                            />
+                        </div>
+
+                        <button onClick={saveSiteConfig} className="bg-blue-600 text-white px-4 py-2 rounded w-full font-bold">Save Branding</button>
                     </div>
                 </GlassCard>
 
                 {/* Developer Info */}
                 <GlassCard className="p-6">
-                    <h3 className="text-lg font-bold mb-4 text-gray-700">Developer Profile (Footer)</h3>
+                    <h3 className="text-lg font-bold mb-4 text-gray-700">Developer Profile</h3>
                     <div className="space-y-3">
                         <div className="flex items-center gap-4">
                             <div className="w-16 h-16 bg-gray-100 rounded-full overflow-hidden border">
