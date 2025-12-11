@@ -50,6 +50,42 @@
   }
 }
 </script>
+<!-- Anti-DevTools Script -->
+<script>
+  (function () {
+    const blockDevTools = () => {
+      // Disable Right Click
+      document.addEventListener('contextmenu', (e) => e.preventDefault());
+      
+      // Disable F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U
+      document.onkeydown = function (e) {
+        if (
+          event.keyCode == 123 ||
+          (e.ctrlKey && e.shiftKey && e.keyCode == 'I'.charCodeAt(0)) ||
+          (e.ctrlKey && e.shiftKey && e.keyCode == 'J'.charCodeAt(0)) ||
+          (e.ctrlKey && e.keyCode == 'U'.charCodeAt(0))
+        ) {
+          return false;
+        }
+      };
+
+      // Debugger Trap
+      setInterval(() => {
+        const start = performance.now();
+        debugger;
+        const end = performance.now();
+        if (end - start > 100) {
+           // DevTools detected - Close window or redirect
+           document.body.innerHTML = '<div style="display:flex;height:100vh;align-items:center;justify-content:center;background:black;color:red;font-size:24px;font-weight:bold;">Security Alert: Developer Tools Detected. Access Denied.</div>';
+           window.location.href = "about:blank"; 
+        }
+      }, 1000);
+    };
+
+    // Uncomment the line below to enable protection in production
+    blockDevTools();
+  })();
+</script>
 </head>
   <body>
     <div id="root">

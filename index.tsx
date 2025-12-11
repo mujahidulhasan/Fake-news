@@ -1,4 +1,4 @@
-import React, { ReactNode, Component, useEffect } from 'react';
+import React, { ReactNode, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { PublicLanding } from './pages/PublicLanding';
@@ -7,6 +7,8 @@ import { AdminLogin } from './pages/admin/AdminLogin';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { TemplateEditor } from './pages/admin/TemplateEditor';
 import { ChannelManager } from './pages/admin/ChannelManager';
+import { UserControl } from './pages/admin/UserControl';
+import { Settings } from './pages/admin/Settings';
 import { FontService } from './services/fontService';
 
 // Simple Error Boundary to catch render crashes
@@ -19,8 +21,8 @@ interface ErrorBoundaryState {
   error: any;
 }
 
-// Fix: Use imported Component and class fields to resolve 'state' and 'props' type errors
-class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+// Fix: Use imported React.Component to resolve 'props' type recognition issues
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
   state: ErrorBoundaryState = { hasError: false, error: null };
 
   static getDerivedStateFromError(error: any) {
@@ -93,6 +95,18 @@ const App = () => {
           <Route path="/admin/channels" element={
             <ProtectedRoute>
                 <ChannelManager />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/admin/users" element={
+            <ProtectedRoute>
+                <UserControl />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/admin/settings" element={
+            <ProtectedRoute>
+                <Settings />
             </ProtectedRoute>
           } />
 

@@ -5,6 +5,7 @@ import { TemplateService } from '../../services/templateService';
 import { AssetService } from '../../services/assetService';
 import { ChannelService } from '../../services/channelService';
 import { FontService } from '../../services/fontService';
+import { VisualSelect } from '../../components/VisualSelect';
 
 // --- ICONS ---
 const Icons = {
@@ -22,24 +23,21 @@ const Icons = {
   AlignLeft: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="21" y1="6" x2="3" y2="6"/><line x1="15" y1="12" x2="3" y2="12"/><line x1="17" y1="18" x2="3" y2="18"/></svg>,
   AlignCenter: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="21" y1="6" x2="3" y2="6"/><line x1="17" y1="12" x2="7" y2="12"/><line x1="19" y1="18" x2="5" y2="18"/></svg>,
   AlignRight: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="12" x2="9" y2="12"/><line x1="21" y1="18" x2="7" y2="18"/></svg>,
-  
   AlignTop: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="6" y1="21" x2="6" y2="3"/><line x1="12" y1="15" x2="12" y2="3"/><line x1="18" y1="17" x2="18" y2="3"/></svg>, 
   AlignMiddle: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="21" y1="12" x2="3" y2="12"/><polyline points="15 8 12 12 9 8"/><polyline points="15 16 12 12 9 16"/></svg>, 
   AlignBottom: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="6" y1="3" x2="6" y2="21"/><line x1="12" y1="9" x2="12" y2="21"/><line x1="18" y1="7" x2="18" y2="21"/></svg>,
-
   PosLeft: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/><line x1="21" y1="5" x2="21" y2="19"/></svg>, 
   PosCenter: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/></svg>,
   PosRight: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/><line x1="3" y1="5" x2="3" y2="19"/></svg>,
-  Reload: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>,
+  Plus: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+  Upload: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
+  RefImage: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>,
+  BgReplace: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/><line x1="16" y1="5" x2="22" y2="5"/><line x1="19" y1="2" x2="19" y2="8"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>,
   Minus: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>,
   Settings: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1.82.33h.09a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
   Layers: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>,
   ArrowUp: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>,
   ArrowDown: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>,
-  Plus: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
-  Upload: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
-  RefImage: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>,
-  BgReplace: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/><line x1="16" y1="5" x2="22" y2="5"/><line x1="19" y1="2" x2="19" y2="8"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
 };
 
 // Helper to convert file to base64
@@ -74,6 +72,7 @@ export const TemplateEditor: React.FC = () => {
   // Asset Management State
   const [showAssetModal, setShowAssetModal] = useState(false);
   const [assets, setAssets] = useState<Asset[]>([]);
+  const [uploadChannelId, setUploadChannelId] = useState(''); // Default to global or specific
 
   // Reference Image State (Trace Layer)
   const [refImage, setRefImage] = useState<string | null>(null);
@@ -95,7 +94,7 @@ export const TemplateEditor: React.FC = () => {
 
   useEffect(() => {
     const loadInitialData = async () => {
-        // Load assets
+        // Load assets (all to start, we can filter view later if needed)
         const a = await AssetService.getAll();
         setAssets(a);
 
@@ -114,6 +113,7 @@ export const TemplateEditor: React.FC = () => {
   // AUTO LOAD Template when channel changes
   useEffect(() => {
     if (!channelId) return;
+    setUploadChannelId(channelId); // Default upload to current channel
 
     const loadTemplate = async () => {
         const templates = await TemplateService.getByChannel(channelId);
@@ -130,7 +130,6 @@ export const TemplateEditor: React.FC = () => {
             // Reset if no template exists for this channel
             setTemplateId(null);
             setTemplateName('New Template');
-            // Keep backgroundURL or reset? Resetting is safer to avoid confusion
             setBackgroundUrl(null);
             setBoxes([]);
             setHasSaved(false);
@@ -209,6 +208,7 @@ export const TemplateEditor: React.FC = () => {
               const base64 = await fileToBase64(file);
               const newAsset: Asset = {
                   id: Date.now().toString(),
+                  channelId: uploadChannelId || undefined, // Set channel if selected
                   type,
                   name: file.name.split('.')[0],
                   url: base64
@@ -229,6 +229,7 @@ export const TemplateEditor: React.FC = () => {
       setAssets(updated);
   };
 
+  // ... [Keep existing save, addBox, updateBox, etc logic unchanged] ...
   const handleSave = async () => {
     if (!backgroundUrl) {
       alert("Please upload a background image first.");
@@ -268,7 +269,7 @@ export const TemplateEditor: React.FC = () => {
       fitMode: 'cover',
       locked: false,
       opacity: 1,
-      lineHeight: 1.2 // Default tight line height
+      lineHeight: 1.2
     };
     if (type === BoxType.IMAGE) { newBox.w = 30; newBox.h = 30; }
     if (type === BoxType.LOGO || type === BoxType.ADS) { newBox.w = 15; newBox.h = 15; }
@@ -300,7 +301,6 @@ export const TemplateEditor: React.FC = () => {
       if (box) updateBox(id, { locked: !box.locked });
   };
 
-  // Position Alignment (Moves the box)
   const alignBox = (id: string, alignType: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom') => {
       const box = boxes.find(b => b.id === id);
       if (!box) return;
@@ -316,7 +316,6 @@ export const TemplateEditor: React.FC = () => {
       updateBox(id, updates);
   };
 
-  // Text Alignment (Justify text inside box)
   const alignText = (id: string, align: 'left' | 'center' | 'right') => {
       updateBox(id, { align });
   };
@@ -369,7 +368,6 @@ export const TemplateEditor: React.FC = () => {
       let newX = startXVal + dxPct;
       let newY = startYVal + dyPct;
 
-      // CONSTRAINT: Strict bounds
       if (newX < 0) { newX = 0; hit = true; }
       if (newX + box.w > 100) { newX = 100 - box.w; hit = true; }
       if (newY < 0) { newY = 0; hit = true; }
@@ -380,11 +378,9 @@ export const TemplateEditor: React.FC = () => {
       let newW = startXVal + dxPct;
       let newH = startYVal + dyPct;
 
-      // Min size
       if (newW < 2) newW = 2;
       if (newH < 2) newH = 2;
 
-      // CONSTRAINT: Resize bounds
       if (box.x + newW > 100) { newW = 100 - box.x; hit = true; }
       if (box.y + newH > 100) { newH = 100 - box.y; hit = true; }
 
@@ -414,6 +410,8 @@ export const TemplateEditor: React.FC = () => {
   }, [boxes]);
 
   const selectedBox = boxes.find(b => b.id === selectedBoxId);
+  // Filter assets for dropdown in editor property panel (just for this channel)
+  const currentChannelAssets = assets.filter(a => !a.channelId || a.channelId === channelId);
 
   return (
     <div className="h-screen flex flex-col bg-gray-100 overflow-hidden">
@@ -425,15 +423,28 @@ export const TemplateEditor: React.FC = () => {
                     <h3 className="text-lg font-bold">Assets Library</h3>
                     <button onClick={() => setShowAssetModal(false)}><Icons.Close /></button>
                 </div>
-                <div className="p-4 bg-gray-50 flex gap-4">
-                     <label className="flex items-center gap-2 px-4 py-2 bg-white border rounded cursor-pointer hover:bg-gray-100">
-                         <Icons.Star /> Upload Logo
-                         <input type="file" accept="image/*" className="hidden" onChange={(e) => handleAssetUpload(e, 'LOGO')} />
-                     </label>
-                     <label className="flex items-center gap-2 px-4 py-2 bg-white border rounded cursor-pointer hover:bg-gray-100">
-                         <Icons.Ads /> Upload Ad
-                         <input type="file" accept="image/*" className="hidden" onChange={(e) => handleAssetUpload(e, 'ADS')} />
-                     </label>
+                <div className="p-4 bg-gray-50 flex flex-col gap-4">
+                     <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-gray-600">Upload to:</span>
+                        <select 
+                            className="text-sm border rounded p-1" 
+                            value={uploadChannelId} 
+                            onChange={e => setUploadChannelId(e.target.value)}
+                        >
+                            <option value="">Global (All Channels)</option>
+                            {channels.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                        </select>
+                     </div>
+                     <div className="flex gap-4">
+                        <label className="flex items-center gap-2 px-4 py-2 bg-white border rounded cursor-pointer hover:bg-gray-100">
+                            <Icons.Star /> Upload Logo
+                            <input type="file" accept="image/*" className="hidden" onChange={(e) => handleAssetUpload(e, 'LOGO')} />
+                        </label>
+                        <label className="flex items-center gap-2 px-4 py-2 bg-white border rounded cursor-pointer hover:bg-gray-100">
+                            <Icons.Ads /> Upload Ad
+                            <input type="file" accept="image/*" className="hidden" onChange={(e) => handleAssetUpload(e, 'ADS')} />
+                        </label>
+                     </div>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 sm:grid-cols-3 gap-4">
                     {assets.length === 0 ? <p className="text-gray-400 text-center col-span-3 py-10">No assets uploaded yet.</p> : assets.map(asset => (
@@ -443,7 +454,10 @@ export const TemplateEditor: React.FC = () => {
                             </div>
                             <div className="flex justify-between items-center">
                                 <span className="text-xs font-bold bg-gray-200 px-1.5 py-0.5 rounded text-gray-600">{asset.type}</span>
-                                <span className="text-xs text-gray-500 truncate max-w-[80px]">{asset.name}</span>
+                                <div className="flex flex-col overflow-hidden w-full px-2">
+                                     <span className="text-xs text-gray-700 font-bold truncate">{asset.name}</span>
+                                     <span className="text-[10px] text-gray-400 truncate">{channels.find(c => c._id === asset.channelId)?.name || 'Global'}</span>
+                                </div>
                             </div>
                             <button onClick={() => deleteAsset(asset.id)} className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity"><Icons.Trash /></button>
                         </div>
@@ -485,7 +499,7 @@ export const TemplateEditor: React.FC = () => {
         </div>
       </div>
 
-      {/* --- CANVAS AREA --- */}
+      {/* --- CANVAS AREA (Same as before) --- */}
       <div className="flex-1 relative bg-gray-200/50 overflow-hidden flex items-center justify-center p-4 md:p-8">
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-5">
                 <div className="w-full h-full" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
@@ -520,7 +534,6 @@ export const TemplateEditor: React.FC = () => {
                 >
                     <img src={backgroundUrl} alt="Template Background" className="w-full h-full object-contain pointer-events-none block" draggable={false} />
 
-                    {/* Reference Image Overlay */}
                     {refImage && (
                         <img 
                             src={refImage} 
@@ -589,7 +602,7 @@ export const TemplateEditor: React.FC = () => {
                 </div>
             )}
 
-            {/* FLOATING PANEL */}
+            {/* FLOATING PANEL - UPDATED WITH VISUAL SELECT FOR DEFAULT VALUES */}
             {!isPanelMinimized && (selectedBox || activeTab === 'layers') && (
                 <div className="absolute right-4 top-4 bottom-20 w-80 bg-white shadow-2xl rounded-2xl z-50 flex flex-col border border-gray-200 animate-in fade-in zoom-in-95 duration-200">
                     <div className="p-2 border-b border-gray-100 bg-gray-50/50 rounded-t-2xl backdrop-blur-sm">
@@ -629,7 +642,21 @@ export const TemplateEditor: React.FC = () => {
                                     </div>
                                 </div>
 
-                                {/* Text Specific Properties */}
+                                {/* VISUAL SELECT FOR LOGO/ADS in EDITOR */}
+                                {(selectedBox.type === BoxType.LOGO || selectedBox.type === BoxType.ADS) && (
+                                    <div className="pt-2">
+                                        <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">Default {selectedBox.type}</label>
+                                        <VisualSelect 
+                                            assets={currentChannelAssets.filter(a => a.type === selectedBox.type)}
+                                            selectedId={null} // Editor doesn't set value usually, but could
+                                            onChange={() => {}} // Editor preview doesn't change unless we want it to
+                                            placeholder={`Only showing ${selectedBox.type} for current channel`}
+                                        />
+                                        <p className="text-[10px] text-gray-400 mt-1">Note: This dropdown is just to verify available assets for this channel.</p>
+                                    </div>
+                                )}
+
+                                {/* Text Properties ... (Same as before) */}
                                 {selectedBox.type === BoxType.TEXT && (
                                     <div className="space-y-5 pt-4 border-t border-dashed border-gray-200">
                                         {/* Font Family */}

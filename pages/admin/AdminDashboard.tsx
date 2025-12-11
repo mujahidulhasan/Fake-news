@@ -1,8 +1,24 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { GlassCard } from '../../components/GlassCard';
+import { AssetService } from '../../services/assetService';
 
 export const AdminDashboard: React.FC = () => {
+  const [assetCount, setAssetCount] = useState(0);
+
+  useEffect(() => {
+      const loadStats = async () => {
+          const assets = await AssetService.getAll();
+          setAssetCount(assets.length);
+      };
+      loadStats();
+  }, []);
+
+  // Mock Storage calculation: Assumes 500KB per asset average. Max 500MB (Supabase free tier varies but just visual)
+  const usedMB = (assetCount * 0.5);
+  const totalMB = 500; 
+  const usedPercent = Math.min((usedMB / totalMB) * 100, 100);
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
@@ -18,8 +34,27 @@ export const AdminDashboard: React.FC = () => {
             }}>Logout</button>
         </div>
       </div>
+      
+      {/* Storage Slider */}
+      <div className="mb-8">
+          <GlassCard className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50">
+              <div className="flex justify-between items-end mb-2">
+                  <div>
+                      <h4 className="font-bold text-gray-700">Storage Usage</h4>
+                      <p className="text-xs text-gray-500">Based on asset count estimation ({assetCount} assets)</p>
+                  </div>
+                  <span className="text-sm font-bold text-indigo-600">{usedMB.toFixed(1)} MB / {totalMB} MB</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden border border-gray-300">
+                  <div 
+                    className="bg-indigo-500 h-4 rounded-full transition-all duration-1000 ease-out" 
+                    style={{ width: `${usedPercent}%` }}
+                  ></div>
+              </div>
+          </GlassCard>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <GlassCard className="p-6 flex flex-col items-center text-center group cursor-pointer hover:bg-white/60">
             <div className="text-4xl mb-4 p-4 bg-blue-100 rounded-full text-blue-500 group-hover:scale-110 transition-transform">📺</div>
             <h3 className="text-xl font-bold mb-2">Channels</h3>
@@ -37,18 +72,18 @@ export const AdminDashboard: React.FC = () => {
         </GlassCard>
 
         <GlassCard className="p-6 flex flex-col items-center text-center group cursor-pointer hover:bg-white/60">
-            <div className="text-4xl mb-4 p-4 bg-green-100 rounded-full text-green-600 group-hover:scale-110 transition-transform">📂</div>
-            <h3 className="text-xl font-bold mb-2">Assets Library</h3>
-            <p className="text-gray-500 mb-4 text-sm">Upload global logos, ads, fonts and stickers.</p>
-            <button onClick={() => alert('Access assets via the Editor')} className="bg-gray-100 text-gray-600 px-4 py-2 rounded hover:bg-green-500 hover:text-white transition w-full text-sm font-medium">Manage Assets</button>
+            <div className="text-4xl mb-4 p-4 bg-purple-100 rounded-full text-purple-600 group-hover:scale-110 transition-transform">👥</div>
+            <h3 className="text-xl font-bold mb-2">User Control</h3>
+            <p className="text-gray-500 mb-4 text-sm">Manage Premium members, passwords and access.</p>
+            <Link to="/admin/users" className="bg-gray-100 text-gray-600 px-4 py-2 rounded hover:bg-purple-500 hover:text-white transition w-full text-sm font-medium">Manage Users</Link>
         </GlassCard>
-      </div>
-      
-      <div className="mt-8">
-          <GlassCard className="p-6">
-              <h3 className="font-bold text-gray-700 mb-4">Recent Activity</h3>
-              <div className="text-sm text-gray-500 italic">No recent activity. Start editing templates to see changes here.</div>
-          </GlassCard>
+
+        <GlassCard className="p-6 flex flex-col items-center text-center group cursor-pointer hover:bg-white/60">
+            <div className="text-4xl mb-4 p-4 bg-gray-100 rounded-full text-gray-600 group-hover:scale-110 transition-transform">⚙️</div>
+            <h3 className="text-xl font-bold mb-2">Settings</h3>
+            <p className="text-gray-500 mb-4 text-sm">Admin Password, Watermark Overlay, etc.</p>
+            <Link to="/admin/settings" className="bg-gray-100 text-gray-600 px-4 py-2 rounded hover:bg-gray-800 hover:text-white transition w-full text-sm font-medium">Open Settings</Link>
+        </GlassCard>
       </div>
     </div>
   );

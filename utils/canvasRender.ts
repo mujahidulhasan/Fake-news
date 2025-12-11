@@ -4,30 +4,55 @@ export const renderCard = async (
   canvas: HTMLCanvasElement,
   template: Template,
   formData: UserFormData,
-  assets: { [key: string]: string } // Map of asset keys to URLs (logos/ads)
+  assets: { [key: string]: string }, // Map of asset keys to URLs (logos/ads)
+  scaleFactor: number = 1,
+  watermarkUrl: string | null = null,
+  showWatermark: boolean = true
 ): Promise<void> => {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
-  // 1. Setup Canvas Dimensions
-  canvas.width = template.width;
-  canvas.height = template.height;
+  // 1. Setup Canvas Dimensions based on scale
+  const originalW = template.width;
+  const originalH = template.height;
+  canvas.width = originalW * scaleFactor;
+  canvas.height = originalH * scaleFactor;
+
+  // Scale context
+  ctx.scale(scaleFactor, scaleFactor);
 
   // 2. Draw Background
   try {
     const bgImage = await loadImage(template.backgroundUrl);
-    ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(bgImage, 0, 0, originalW, originalH);
   } catch (e) {
     console.error("Failed to load background", e);
     ctx.fillStyle = "#fff";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, originalW, originalH);
   }
 
   // 3. Draw Boxes
   const sortedBoxes = template.boxes;
 
   for (const box of sortedBoxes) {
-    await drawBox(ctx, box, template.width, template.height, formData, assets);
+    await drawBox(ctx, box, originalW, originalH, formData, assets);
+  }
+
+  // 4. Draw System Watermark (Overlay)
+  if (showWatermark && watermarkUrl) {
+      try {
+          const wmImg = await loadImage(watermarkUrl);
+          ctx.globalAlpha = 0.5; // Semi-transparent
+          // Draw tiled or centered? Let's do centered large
+          const wmW = originalW * 0.4; // 40% width
+          const wmH = (wmW / wmImg.width) * wmImg.height;
+          const wmX = (originalW - wmW) / 2;
+          const wmY = (originalH - wmH) / 2;
+          ctx.drawImage(wmImg, wmX, wmY, wmW, wmH);
+          ctx.globalAlpha = 1.0;
+      } catch (e) {
+          console.warn("Failed to load watermark");
+      }
   }
 };
 
@@ -81,8 +106,6 @@ const drawBox = async (
              startY = y + h;
         }
 
-        // --- LINE HEIGHT CHANGE ---
-        // Default to 1.2 for tighter headlines if not set, previously was implied 1.4
         const lhMultiplier = box.lineHeight || 1.2;
         const lineHeight = fontSize * lhMultiplier;
 
@@ -165,7 +188,6 @@ const drawBox = async (
 
             // Fit mode logic
             if (box.fitMode === 'contain') {
-                // Keep aspect ratio, fit inside
                 const scale = Math.min(w / img.width, h / img.height);
                 const rw = img.width * scale;
                 const rh = img.height * scale;
@@ -173,7 +195,6 @@ const drawBox = async (
                 const ry = y + (h - rh) / 2;
                 ctx.drawImage(img, rx, ry, rw, rh);
             } else {
-                // Cover (default)
                 const scale = Math.max(w / img.width, h / img.height);
                 const rw = img.width * scale;
                 const rh = img.height * scale;
@@ -182,7 +203,7 @@ const drawBox = async (
                 ctx.drawImage(img, rx, ry, rw, rh);
             }
         } catch (err) {
-            console.warn("Could not load image for box", box.key);
+            // console.warn("Could not load image for box", box.key);
         }
     }
   }

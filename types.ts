@@ -48,6 +48,7 @@ export interface Template {
 
 export interface Asset {
   id: string;
+  channelId?: string; // Optional: if null, it's global. If set, specific to channel.
   type: 'LOGO' | 'ADS';
   name: string;
   url: string;
@@ -65,8 +66,13 @@ export interface UserFormData {
   [key: string]: string | File | null;
 }
 
-export interface AuthState {
-  token: string | null;
-  isAuthenticated: boolean;
-  user: { email: string; role: string } | null;
+export interface PremiumUser {
+    id: string;
+    username: string;
+    password?: string; // Only for creating/editing logic
+    start_date: string;
+    end_date: string;
+    is_active: boolean;
 }
+
+export type DownloadQuality = 'SD' | 'HD' | '2K' | '4K';
