@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>NewsCard Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Hind+Siliguri:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Hind+Siliguri:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script>
       tailwind.config = {
         theme: {
@@ -14,13 +14,13 @@
               sans: ['Inter', 'Hind Siliguri', 'sans-serif'],
             },
             colors: {
-              glass: "rgba(255, 255, 255, 0.25)",
-              glassBorder: "rgba(255, 255, 255, 0.3)",
+              glass: "rgba(255, 255, 255, 0.8)",
+              glassBorder: "rgba(255, 255, 255, 0.6)",
               primary: "#ef4444", // Red-500
               gold: {
-                400: '#FACC15',
-                500: '#EAB308',
-                600: '#CA8A04',
+                100: '#fbe8a6',
+                200: '#f4c64f',
+                300: '#d99b05',
               }
             },
             animation: {
@@ -43,40 +43,37 @@
         --gold-3:#d99b05;
         --muted:#6b7280;
         --bg: #ffffff;
+        --glass: rgba(15,23,42,0.04);
       }
 
       body {
         background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
         min-height: 100vh;
       }
-      /* Custom scrollbar */
-      ::-webkit-scrollbar {
-        width: 8px;
+      
+      /* Premium Button Styles from request */
+      .premium-btn {
+        width:42px;height:42px;border-radius:10px;display:inline-grid;place-items:center;
+        background:linear-gradient(180deg, rgba(255,250,240,0.95), #fff);
+        border:1px solid rgba(217,155,5,0.12);
+        box-shadow:0 6px 18px rgba(217,155,5,0.08), 0 1px 0 rgba(255,255,255,0.6) inset;
+        cursor:pointer;position:relative;
+        transition:transform .12s ease, box-shadow .12s ease;
       }
-      ::-webkit-scrollbar-track {
-        background: transparent;
-      }
-      ::-webkit-scrollbar-thumb {
-        background: rgba(156, 163, 175, 0.5);
-        border-radius: 4px;
+      .premium-btn:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(217,155,5,0.12)}
+      .premium-ico svg{width:20px;height:20px;display:block;filter:drop-shadow(0 1px 0 rgba(255,255,255,0.6))}
+
+      .premium-btn::after{
+        content:'';position:absolute;right:-6px;top:-6px;width:10px;height:10px;border-radius:50%;
+        background:linear-gradient(135deg,var(--gold-1),var(--gold-2));
+        box-shadow:0 6px 16px rgba(249,183,54,0.25);
+        opacity:0.95;
       }
 
-      /* Premium Button Styles */
-      .premium-btn {
-        width: 42px; height: 42px; border-radius: 10px; display: inline-grid; place-items: center;
-        background: linear-gradient(180deg, rgba(255,250,240,0.95), #fff);
-        border: 1px solid rgba(217,155,5,0.12);
-        box-shadow: 0 6px 18px rgba(217,155,5,0.08), 0 1px 0 rgba(255,255,255,0.6) inset;
-        cursor: pointer; position: relative;
-        transition: transform .12s ease, box-shadow .12s ease;
-      }
-      .premium-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(217,155,5,0.12); }
-      .premium-btn::after {
-        content: ''; position: absolute; right: -6px; top: -6px; width: 10px; height: 10px; border-radius: 50%;
-        background: linear-gradient(135deg,var(--gold-1),var(--gold-2));
-        box-shadow: 0 6px 16px rgba(249,183,54,0.25);
-        opacity: 0.95;
-      }
+      /* Custom scrollbar */
+      ::-webkit-scrollbar { width: 8px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.5); border-radius: 4px; }
     </style>
   <script type="importmap">
 {

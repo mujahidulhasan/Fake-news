@@ -12,9 +12,11 @@ import { UserService } from '../services/userService';
 // Icons
 const Icons = {
     Back: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>,
-    Premium: () => <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="20" height="20"><path d="M3 7l3 9h12l3-9-6 4-3-4-3 4-6-4z" fill="#f4c64f"/></svg>,
+    Premium: () => <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="20" height="20"><path d="M3 7l3 9h12l3-9-6 4-3-4-3 4-6-4z" fill="url(#g1)"/><defs><linearGradient id="g1" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stopColor="#fff6d6"/><stop offset="1" stopColor="#f4c64f"/></linearGradient></defs></svg>,
     Lock: () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>,
     Check: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-green-500"><polyline points="20 6 9 17 4 12"/></svg>,
+    Search: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ opacity: 0.7 }}><path d="M21 21l-4.35-4.35" stroke="#6b7280" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><circle cx="11" cy="11" r="6" stroke="#6b7280" strokeWidth="1.6"/></svg>,
+    Caret: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ opacity: 0.7, marginLeft: 6 }}><path d="M6 9l6 6 6-6" stroke="#374151" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
 };
 
 export const CardGenerator: React.FC = () => {
@@ -35,6 +37,7 @@ export const CardGenerator: React.FC = () => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [showContactInfo, setShowContactInfo] = useState(false);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
   
   // Auth Form
   const [loginUser, setLoginUser] = useState('');
@@ -48,8 +51,9 @@ export const CardGenerator: React.FC = () => {
     FontService.loadSavedFonts();
     const storedUser = localStorage.getItem('premiumUser');
     if (storedUser) {
-        setPremiumUser(JSON.parse(storedUser));
-        setShowWatermark(false);
+        const user = JSON.parse(storedUser);
+        setPremiumUser(user);
+        setShowWatermark(false); // Default to no watermark for premium
     }
     const fetchDev = async () => {
         const info = await AssetService.getDeveloperInfo();
@@ -92,7 +96,8 @@ export const CardGenerator: React.FC = () => {
             formData, 
             assetMap, 
             1, // Preview scale
-            template.watermarkUrl || null, // Use Template Specific Watermark
+            // If showWatermark is TRUE, we pass the URL. If FALSE, we pass null to disable it.
+            showWatermark ? (template.watermarkUrl || null) : null, 
             showWatermark
         );
     }
@@ -119,6 +124,7 @@ export const CardGenerator: React.FC = () => {
       localStorage.removeItem('premiumUser');
       setPremiumUser(null);
       setShowWatermark(true);
+      setShowUserDropdown(false);
   };
 
   const processDownload = async (quality: DownloadQuality) => {
@@ -131,6 +137,10 @@ export const CardGenerator: React.FC = () => {
               return;
           }
           await UserService.incrementQuota(premiumUser.id);
+          // Update local state quota count for UI
+          setPremiumUser({...premiumUser, quota_used: premiumUser.quota_used + 1});
+          // Update local storage to reflect quota change immediately in UI if reloaded
+          localStorage.setItem('premiumUser', JSON.stringify({...premiumUser, quota_used: premiumUser.quota_used + 1}));
       }
 
       setGenerating(true);
@@ -150,7 +160,7 @@ export const CardGenerator: React.FC = () => {
       const assetMap: { [key: string]: string } = {};
       [...assets.logos, ...assets.ads].forEach(a => assetMap[a.id] = a.url);
 
-      renderCard(tempCanvas, template, formData, assetMap, scale, template.watermarkUrl || null, showWatermark).then(() => {
+      renderCard(tempCanvas, template, formData, assetMap, scale, showWatermark ? (template.watermarkUrl || null) : null, showWatermark).then(() => {
          const link = document.createElement('a');
          link.download = `newscard-${template.name}-${suffix}-${Date.now()}.png`;
          link.href = tempCanvas.toDataURL('image/png', 0.9);
@@ -164,7 +174,22 @@ export const CardGenerator: React.FC = () => {
       setShowContactInfo(false);
   };
 
-  // Skeleton Loading Animation
+  // Close dropdown on click outside
+  useEffect(() => {
+      const closeDrop = (e: MouseEvent) => {
+          if (showUserDropdown && !(e.target as Element).closest('#userWrap')) {
+              setShowUserDropdown(false);
+          }
+      };
+      document.addEventListener('click', closeDrop);
+      return () => document.removeEventListener('click', closeDrop);
+  }, [showUserDropdown]);
+
+  const formatDate = (dateStr: string) => {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', year: 'numeric' });
+  };
+
   if (loading) {
       return (
         <div className="container mx-auto px-4 py-6 animate-pulse">
@@ -204,56 +229,82 @@ export const CardGenerator: React.FC = () => {
   );
 
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div className="min-h-screen bg-gray-50">
       {/* Login Modal */}
       {showLoginModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-              <GlassCard className="w-full max-w-sm p-6 relative">
-                  <button onClick={() => setShowLoginModal(false)} className="absolute top-2 right-2 text-gray-500 hover:text-red-500">✕</button>
-                  <h2 className="text-xl font-bold mb-4 text-center text-gray-800">Premium Login</h2>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+              <div className="w-full max-w-sm p-8 bg-white rounded-2xl shadow-2xl relative animate-in zoom-in-95">
+                  <button onClick={() => setShowLoginModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition-colors">✕</button>
+                  
+                  <div className="text-center mb-6">
+                      <div className="w-12 h-12 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                          <Icons.Lock />
+                      </div>
+                      <h2 className="text-2xl font-bold text-gray-900">Premium Login</h2>
+                      <p className="text-sm text-gray-500">Access exclusive features</p>
+                  </div>
+
                   <form onSubmit={handleLogin} className="space-y-4">
-                      <input type="text" placeholder="Username" className="w-full p-2 border rounded bg-white/50 text-gray-800" value={loginUser} onChange={e => setLoginUser(e.target.value)} />
-                      <input type="password" placeholder="Password" className="w-full p-2 border rounded bg-white/50 text-gray-800" value={loginPass} onChange={e => setLoginPass(e.target.value)} />
-                      <button type="submit" className="w-full py-2 bg-primary text-white rounded font-bold hover:bg-red-600">Login</button>
+                      <div>
+                          <input 
+                            type="text" 
+                            placeholder="Username" 
+                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-yellow-400 focus:border-transparent outline-none transition-all bg-gray-50 focus:bg-white text-gray-900" 
+                            value={loginUser} 
+                            onChange={e => setLoginUser(e.target.value)} 
+                          />
+                      </div>
+                      <div>
+                          <input 
+                            type="password" 
+                            placeholder="Password" 
+                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-yellow-400 focus:border-transparent outline-none transition-all bg-gray-50 focus:bg-white text-gray-900" 
+                            value={loginPass} 
+                            onChange={e => setLoginPass(e.target.value)} 
+                          />
+                      </div>
+                      <button type="submit" className="w-full py-3.5 bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-xl font-bold hover:shadow-lg hover:scale-[1.02] transition-all transform text-sm uppercase tracking-wide">
+                          Unlock Premium
+                      </button>
                   </form>
-              </GlassCard>
+              </div>
           </div>
       )}
 
       {/* Subscription/Purchase Modal (Bangla) */}
       {showSubscriptionModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-              <GlassCard className="w-full max-w-md p-0 relative overflow-hidden flex flex-col max-h-[90vh]">
-                   <button onClick={() => setShowSubscriptionModal(false)} className="absolute top-3 right-3 text-white z-10 bg-black/20 rounded-full p-1 hover:bg-red-500">✕</button>
+              <div className="w-full max-w-md bg-white rounded-2xl overflow-hidden shadow-2xl relative flex flex-col max-h-[90vh] animate-in zoom-in-95">
+                   <button onClick={() => setShowSubscriptionModal(false)} className="absolute top-3 right-3 text-white z-20 bg-black/20 rounded-full p-1 hover:bg-red-500 transition-colors">✕</button>
                    
                    {!showContactInfo ? (
                      <>
                         {/* Header */}
-                        <div className="bg-gradient-to-br from-yellow-400 to-orange-500 p-6 text-center text-white relative overflow-hidden">
+                        <div className="bg-gradient-to-br from-yellow-400 to-orange-500 p-8 text-center text-white relative overflow-hidden">
                              <div className="absolute top-0 left-0 w-full h-full bg-white/10 animate-shine skew-x-12"></div>
-                             <h2 className="text-2xl font-bold relative z-10">Premium Membership</h2>
-                             <p className="opacity-90 relative z-10 text-sm">আনলিমিটেড অ্যাক্সেস উপভোগ করুন</p>
-                             <div className="mt-4 bg-white text-orange-600 font-extrabold text-3xl inline-block px-4 py-1 rounded-full shadow-lg relative z-10">
+                             <h2 className="text-2xl font-bold relative z-10 font-sans">Premium Membership</h2>
+                             <p className="opacity-90 relative z-10 text-sm mt-1">আনলিমিটেড অ্যাক্সেস উপভোগ করুন</p>
+                             <div className="mt-5 bg-white text-orange-600 font-extrabold text-3xl inline-block px-6 py-2 rounded-full shadow-xl relative z-10">
                                 ৳৯৯ <span className="text-sm font-medium text-gray-500">/মাস</span>
                              </div>
                         </div>
                         
                         {/* Benefits */}
-                        <div className="p-6 bg-white space-y-4 flex-1 overflow-y-auto">
-                            <ul className="space-y-3">
-                                <li className="flex items-center gap-3 text-gray-700 font-medium"><Icons.Check /> আনলিমিটেড টেমপ্লেট ব্যবহার</li>
-                                <li className="flex items-center gap-3 text-gray-700 font-medium"><Icons.Check /> কোন ওয়াটারমার্ক থাকবে না</li>
-                                <li className="flex items-center gap-3 text-gray-700 font-medium"><Icons.Check /> কোন অ্যাডের ঝামেলা নেই</li>
-                                <li className="flex items-center gap-3 text-gray-700 font-medium"><Icons.Check /> ফাস্ট সার্ভার স্পিড</li>
-                                <li className="flex items-center gap-3 text-gray-700 font-medium"><Icons.Check /> 4K হাই কোয়ালিটি ডাউনলোড</li>
+                        <div className="p-8 bg-white space-y-4 flex-1 overflow-y-auto">
+                            <ul className="space-y-4">
+                                <li className="flex items-center gap-3 text-gray-700 font-medium"><div className="p-1 bg-green-100 rounded-full text-green-600"><Icons.Check /></div> আনলিমিটেড টেমপ্লেট ব্যবহার</li>
+                                <li className="flex items-center gap-3 text-gray-700 font-medium"><div className="p-1 bg-green-100 rounded-full text-green-600"><Icons.Check /></div> কোন ওয়াটারমার্ক থাকবে না</li>
+                                <li className="flex items-center gap-3 text-gray-700 font-medium"><div className="p-1 bg-green-100 rounded-full text-green-600"><Icons.Check /></div> কোন অ্যাডের ঝামেলা নেই</li>
+                                <li className="flex items-center gap-3 text-gray-700 font-medium"><div className="p-1 bg-green-100 rounded-full text-green-600"><Icons.Check /></div> ফাস্ট সার্ভার স্পিড</li>
+                                <li className="flex items-center gap-3 text-gray-700 font-medium"><div className="p-1 bg-green-100 rounded-full text-green-600"><Icons.Check /></div> 4K হাই কোয়ালিটি ডাউনলোড</li>
                             </ul>
                         </div>
                         
                         {/* Action */}
-                        <div className="p-4 bg-gray-50 border-t">
+                        <div className="p-6 bg-gray-50 border-t border-gray-100">
                              <button 
                                 onClick={() => setShowContactInfo(true)}
-                                className="w-full py-3 bg-gradient-to-r from-primary to-red-700 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transform transition active:scale-95"
+                                className="w-full py-3.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-red-500/30 hover:scale-[1.02] transform transition-all"
                              >
                                 এখনই কিনুন
                              </button>
@@ -262,192 +313,280 @@ export const CardGenerator: React.FC = () => {
                    ) : (
                      /* Contact Info View */
                      <div className="flex flex-col h-full">
-                         <div className="bg-gray-800 text-white p-6 text-center">
+                         <div className="bg-gray-900 text-white p-8 text-center">
                              <h3 className="text-xl font-bold">অ্যাডমিনের সাথে যোগাযোগ করুন</h3>
-                             <p className="text-sm text-gray-400">সাবস্ক্রিপশন চালু করতে নিচে যোগাযোগ করুন</p>
+                             <p className="text-sm text-gray-400 mt-1">সাবস্ক্রিপশন চালু করতে নিচে যোগাযোগ করুন</p>
                          </div>
-                         <div className="p-6 bg-white flex flex-col items-center justify-center flex-1 space-y-6">
+                         <div className="p-8 bg-white flex flex-col items-center justify-center flex-1 space-y-6">
                               {devInfo?.photoUrl && (
-                                  <img src={devInfo.photoUrl} className="w-24 h-24 rounded-full border-4 border-gray-200 object-cover" />
+                                  <img src={devInfo.photoUrl} className="w-24 h-24 rounded-full border-4 border-white shadow-xl object-cover" />
                               )}
                               <div className="text-center">
-                                  <h4 className="text-xl font-bold text-gray-800">{devInfo?.name || 'Admin'}</h4>
+                                  <h4 className="text-xl font-bold text-gray-900">{devInfo?.name || 'Admin'}</h4>
                                   <p className="text-gray-500">{devInfo?.description}</p>
                               </div>
                               <div className="flex gap-4">
-                                  {devInfo?.socials?.whatsapp && <a href={devInfo.socials.whatsapp} target="_blank" className="p-3 bg-green-500 text-white rounded-full hover:bg-green-600"><svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.897.001-6.621 5.413-12.015 12.009-12.015 3.209 0 6.231 1.25 8.502 3.522 2.269 2.273 3.518 5.295 3.516 8.504 0 6.62-5.412 12.015-12.01 12.015-2.045-.002-4.049-.556-5.836-1.637l-6.279 1.672zm9.738-18.107c-3.551 0-6.44 2.889-6.44 6.44 0 3.55 2.889 6.44 6.44 6.44 3.55 0 6.44-2.89 6.44-6.44 0-3.551-2.889-6.44-6.44-6.44z"/></svg></a>}
-                                  {devInfo?.socials?.facebook && <a href={devInfo.socials.facebook} target="_blank" className="p-3 bg-blue-600 text-white rounded-full hover:bg-blue-700"><svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.791-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>}
-                                  {devInfo?.socials?.email && <a href={`mailto:${devInfo.socials.email}`} className="p-3 bg-red-500 text-white rounded-full hover:bg-red-600"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg></a>}
+                                  {devInfo?.socials?.whatsapp && <a href={devInfo.socials.whatsapp} target="_blank" className="p-3 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors shadow-lg shadow-green-500/30"><svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.897.001-6.621 5.413-12.015 12.009-12.015 3.209 0 6.231 1.25 8.502 3.522 2.269 2.273 3.518 5.295 3.516 8.504 0 6.62-5.412 12.015-12.01 12.015-2.045-.002-4.049-.556-5.836-1.637l-6.279 1.672zm9.738-18.107c-3.551 0-6.44 2.889-6.44 6.44 0 3.55 2.889 6.44 6.44 6.44 3.55 0 6.44-2.89 6.44-6.44 0-3.551-2.889-6.44-6.44-6.44z"/></svg></a>}
+                                  {devInfo?.socials?.facebook && <a href={devInfo.socials.facebook} target="_blank" className="p-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/30"><svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.791-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>}
+                                  {devInfo?.socials?.email && <a href={`mailto:${devInfo.socials.email}`} className="p-3 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg shadow-red-500/30"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg></a>}
                               </div>
                               <button onClick={() => setShowContactInfo(false)} className="text-gray-400 hover:text-gray-600 text-sm underline">Back to details</button>
                          </div>
                      </div>
                    )}
-              </GlassCard>
+              </div>
           </div>
       )}
 
       {/* Download Options Modal */}
       {showDownloadModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-              <GlassCard className="w-full max-w-md p-6 relative animate-in zoom-in-95">
-                   <button onClick={() => setShowDownloadModal(false)} className="absolute top-2 right-2 text-gray-500 hover:text-red-500">✕</button>
-                   <h3 className="text-xl font-bold mb-6 text-center text-gray-800">Select Image Quality</h3>
+              <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl relative p-6 animate-in zoom-in-95">
+                   <button onClick={() => setShowDownloadModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition-colors">✕</button>
+                   <h3 className="text-xl font-bold mb-1 text-center text-gray-800">Select Quality</h3>
+                   <p className="text-center text-sm text-gray-500 mb-6">Choose resolution for your news card</p>
+                   
                    <div className="grid grid-cols-1 gap-3">
-                       <button onClick={() => processDownload('SD')} className="p-3 border rounded-lg hover:bg-gray-50 flex justify-between items-center group">
-                           <div className="text-left"><span className="font-bold block text-gray-700">Standard (SD)</span><span className="text-xs text-gray-500">Fast, Lower Quality (~500KB)</span></div>
-                           <span className="text-green-500 font-bold text-sm">FREE</span>
+                       <button onClick={() => processDownload('SD')} className="p-4 border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all flex justify-between items-center group">
+                           <div className="text-left"><span className="font-bold block text-gray-800">Standard (SD)</span><span className="text-xs text-gray-500">Fast, Lower Quality (~500KB)</span></div>
+                           <span className="text-green-600 font-bold text-xs bg-green-50 px-2 py-1 rounded">FREE</span>
                        </button>
-                       <button onClick={() => processDownload('HD')} className="p-3 border rounded-lg hover:bg-gray-50 flex justify-between items-center group">
-                           <div className="text-left"><span className="font-bold block text-gray-700">High Definition (HD)</span><span className="text-xs text-gray-500">Good for Social Media (~1.5MB)</span></div>
-                           <span className="text-green-500 font-bold text-sm">FREE</span>
+                       <button onClick={() => processDownload('HD')} className="p-4 border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all flex justify-between items-center group">
+                           <div className="text-left"><span className="font-bold block text-gray-800">High Definition (HD)</span><span className="text-xs text-gray-500">Good for Social Media (~1.5MB)</span></div>
+                           <span className="text-green-600 font-bold text-xs bg-green-50 px-2 py-1 rounded">FREE</span>
                        </button>
                        
                        {/* Premium Options */}
-                       <button onClick={() => premiumUser ? processDownload('2K') : triggerSubscription()} className={`p-3 border rounded-lg flex justify-between items-center ${premiumUser ? 'hover:bg-gray-50 cursor-pointer' : 'bg-gray-50 opacity-90'}`}>
-                           <div className="text-left"><span className="font-bold block text-gray-700">2K Resolution</span><span className="text-xs text-gray-500">Sharp (~3MB)</span></div>
-                           {premiumUser ? <span className="text-blue-500 font-bold text-sm">PRO</span> : <div className="text-xs font-bold text-yellow-600 flex items-center bg-yellow-100 px-2 py-1 rounded"><Icons.Lock/> PREMIUM</div>}
+                       <button onClick={() => premiumUser ? processDownload('2K') : triggerSubscription()} className={`p-4 border rounded-xl flex justify-between items-center transition-all ${premiumUser ? 'hover:bg-blue-50 border-blue-100 hover:border-blue-300 cursor-pointer' : 'bg-gray-50 border-gray-100 opacity-80'}`}>
+                           <div className="text-left"><span className="font-bold block text-gray-800">2K Resolution</span><span className="text-xs text-gray-500">Sharp Details (~3MB)</span></div>
+                           {premiumUser ? <span className="text-blue-600 font-bold text-xs bg-blue-50 px-2 py-1 rounded">PRO</span> : <div className="text-[10px] font-bold text-yellow-700 flex items-center gap-1 bg-yellow-100 px-2 py-1 rounded"><Icons.Lock/> PREMIUM</div>}
                        </button>
 
-                       <button onClick={() => premiumUser ? processDownload('4K') : triggerSubscription()} className={`p-3 border rounded-lg flex justify-between items-center ${premiumUser ? 'hover:bg-gray-50 cursor-pointer' : 'bg-gray-50 opacity-90'}`}>
-                           <div className="text-left"><span className="font-bold block text-gray-700">4K Ultra HD</span><span className="text-xs text-gray-500">Professional Print (~8MB)</span></div>
-                           {premiumUser ? <span className="text-blue-500 font-bold text-sm">PRO</span> : <div className="text-xs font-bold text-yellow-600 flex items-center bg-yellow-100 px-2 py-1 rounded"><Icons.Lock/> PREMIUM</div>}
+                       <button onClick={() => premiumUser ? processDownload('4K') : triggerSubscription()} className={`p-4 border rounded-xl flex justify-between items-center transition-all ${premiumUser ? 'hover:bg-blue-50 border-blue-100 hover:border-blue-300 cursor-pointer' : 'bg-gray-50 border-gray-100 opacity-80'}`}>
+                           <div className="text-left"><span className="font-bold block text-gray-800">4K Ultra HD</span><span className="text-xs text-gray-500">Professional Print (~8MB)</span></div>
+                           {premiumUser ? <span className="text-blue-600 font-bold text-xs bg-blue-50 px-2 py-1 rounded">PRO</span> : <div className="text-[10px] font-bold text-yellow-700 flex items-center gap-1 bg-yellow-100 px-2 py-1 rounded"><Icons.Lock/> PREMIUM</div>}
                        </button>
                    </div>
-                   {!premiumUser && <p onClick={() => {setShowDownloadModal(false); setShowLoginModal(true);}} className="text-center text-xs text-primary mt-4 cursor-pointer hover:underline">Already a premium member? Login here</p>}
-              </GlassCard>
+                   {!premiumUser && <p onClick={() => {setShowDownloadModal(false); setShowLoginModal(true);}} className="text-center text-xs text-blue-500 mt-6 cursor-pointer hover:underline font-medium">Already a premium member? Login here</p>}
+              </div>
           </div>
       )}
 
-      {/* Top Bar */}
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center">
-            <Link to="/" className="text-gray-500 hover:text-primary mr-4 p-2 bg-white rounded-full shadow-sm hover:shadow-md transition-all">
-                <Icons.Back />
-            </Link>
-            <h2 className="text-lg md:text-2xl font-bold text-gray-800 line-clamp-1">Create {template.name}</h2>
-        </div>
-        <div>
-            {premiumUser ? (
-                <div className="flex items-center gap-2">
-                     <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-200">PRO: {premiumUser.username}</span>
-                     <button onClick={handleLogout} className="text-xs text-red-500 hover:underline">Logout</button>
-                </div>
-            ) : (
-                <button 
-                    onClick={() => setShowLoginModal(true)} 
-                    className="premium-btn"
-                    title="Premium Login"
-                >
-                    <span className="premium-ico"><Icons.Premium /></span>
-                </button>
-            )}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        {/* Left: Preview */}
-        <div className="lg:col-span-2 space-y-4">
-           <GlassCard className="p-2 flex flex-col items-center justify-center bg-gray-900/10 overflow-hidden">
-             {/* Dynamic Aspect Ratio Box */}
-             <div className="relative w-full" style={{ aspectRatio: `${template.width} / ${template.height}` }}>
-                <canvas 
-                    ref={canvasRef}
-                    className="absolute top-0 left-0 w-full h-full shadow-2xl rounded-lg"
-                />
-             </div>
-           </GlassCard>
-           
-           {/* Watermark Toggle */}
-           <div className="flex items-center justify-center gap-2 text-sm">
-                <label className="flex items-center cursor-pointer select-none">
-                    <div className="relative">
-                        <input type="checkbox" className="sr-only" checked={showWatermark} onChange={() => {
-                            if(!premiumUser) {
-                                triggerSubscription();
-                            } else {
-                                setShowWatermark(!showWatermark);
-                            }
-                        }} />
-                        <div className={`block w-10 h-6 rounded-full transition-colors ${showWatermark ? 'bg-red-400' : 'bg-gray-300'}`}></div>
-                        <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${showWatermark ? 'transform translate-x-4' : ''}`}></div>
-                    </div>
-                    <div className="ml-3 text-gray-700 font-medium flex items-center gap-1">
-                        Watermark {showWatermark ? 'ON' : 'OFF'} 
-                        {!premiumUser && <Icons.Lock />}
-                    </div>
-                </label>
-           </div>
-        </div>
-
-        {/* Right: Form */}
-        <div className="lg:col-span-1">
-          <GlassCard className="sticky top-6">
-            <h3 className="text-lg font-semibold mb-4 border-b border-gray-200 pb-2">Customize Content</h3>
-            
-            <div className="space-y-4">
-              {template.boxes.map(box => {
-                // If it's a watermark box but using a static URL provided by template editor, hide it from user form
-                // Unless we decide watermarks should be user-editable (usually they aren't, they are fixed branding)
-                if (box.type === BoxType.WATERMARK) return null; 
-                if (box.type === BoxType.LOGO && box.staticUrl) return null;
-
-                return (
-                  <div key={box.id}>
-                    <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">
-                        {box.key.replace(/_/g, ' ')}
-                    </label>
-                    
-                    {box.type === BoxType.TEXT && (
-                        <textarea
-                            className="w-full p-2 rounded bg-white/50 border border-gray-300 focus:ring-2 focus:ring-primary/50 outline-none resize-y min-h-[80px]"
-                            placeholder={`Enter ${box.key}`}
-                            onChange={(e) => handleInputChange(box.key, e.target.value)}
-                            rows={3}
-                        />
-                    )}
-
-                    {box.type === BoxType.IMAGE && (
-                        <input 
-                            type="file" 
-                            accept="image/*"
-                            className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-                            onChange={(e) => {
-                                if (e.target.files?.[0]) {
-                                    handleInputChange(box.key, e.target.files[0]);
-                                }
-                            }}
-                        />
-                    )}
-                    
-                    {/* VISUAL SELECT FOR LOGO OR ADS */}
-                    {(box.type === BoxType.LOGO || box.type === BoxType.ADS) && !box.staticUrl && (
-                        <VisualSelect 
-                            placeholder={`Select ${box.type === BoxType.LOGO ? 'Logo' : 'Ad'}...`}
-                            assets={box.type === BoxType.LOGO ? assets.logos : assets.ads}
-                            selectedId={formData[box.key] as string}
-                            onChange={(id) => handleInputChange(box.key, id)}
-                        />
-                    )}
+      {/* HEADER */}
+      <header className="bg-white border-b border-gray-100 sticky top-0 z-40">
+          <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+              {/* Left: Brand */}
+              <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-yellow-500/20">ফ</div>
+                  <div className="hidden md:block">
+                      <h1 className="font-bold text-gray-800 leading-tight">NewsCard Pro</h1>
+                      <p className="text-[10px] text-gray-400 font-medium">Create News in Seconds</p>
                   </div>
-                );
-              })}
+              </div>
 
-              <button 
-                onClick={() => setShowDownloadModal(true)}
-                disabled={generating}
-                className={`w-full py-3 mt-6 rounded-lg font-bold text-white shadow-lg transform transition active:scale-95 flex items-center justify-center gap-2 ${generating ? 'bg-gray-400' : 'bg-gradient-to-r from-primary to-red-600 hover:shadow-red-500/30'}`}
-              >
-                {generating ? 'Processing...' : (
-                    <>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
-                        Download Image
-                    </>
-                )}
-              </button>
+              {/* Center: Search (Visual) */}
+              <div className="hidden md:flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-full border border-gray-200 w-64">
+                  <Icons.Search />
+                  <input type="text" placeholder="চ্যানেল সার্চ করুন…" className="bg-transparent border-none outline-none text-xs w-full text-gray-600 placeholder-gray-400" disabled />
+              </div>
+
+              {/* Right: User Menu */}
+              <div className="flex items-center gap-4">
+                  <Link to="/" className="text-gray-400 hover:text-gray-600 transition-colors p-2 bg-gray-50 rounded-full">
+                      <Icons.Back />
+                  </Link>
+
+                  {/* PREMIUM / USER AREA */}
+                  <div className="relative" id="userWrap">
+                      {premiumUser ? (
+                          // LOGGED IN STATE
+                          <div>
+                              <div 
+                                onClick={() => setShowUserDropdown(!showUserDropdown)}
+                                className="flex items-center gap-2 p-1.5 pr-3 bg-white border border-gray-100 rounded-xl cursor-pointer hover:shadow-md transition-shadow select-none"
+                              >
+                                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center text-white font-bold shadow-sm">
+                                      {premiumUser.username.charAt(0).toUpperCase()}
+                                  </div>
+                                  <div className="hidden sm:flex flex-col items-start">
+                                      <span className="text-xs font-bold text-gray-800 leading-none">{premiumUser.username}</span>
+                                      <span className="text-[10px] text-yellow-600 font-bold bg-yellow-50 px-1.5 py-0.5 rounded mt-0.5 border border-yellow-100">PREMIUM</span>
+                                  </div>
+                                  <Icons.Caret />
+                              </div>
+
+                              {/* Dropdown Panel */}
+                              {showUserDropdown && (
+                                  <div className="absolute right-0 top-14 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 p-3 z-50 animate-in fade-in slide-in-from-top-2">
+                                      <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-xl mb-2">
+                                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center text-white font-bold text-lg">
+                                              {premiumUser.username.charAt(0).toUpperCase()}
+                                          </div>
+                                          <div className="overflow-hidden">
+                                              <h4 className="font-bold text-gray-800 text-sm truncate">{premiumUser.username}</h4>
+                                              <p className="text-xs text-gray-500">Premium Member</p>
+                                          </div>
+                                      </div>
+                                      
+                                      <div className="p-2 mb-2">
+                                          <div className="flex justify-between text-xs mb-1">
+                                              <span className="text-gray-500">Quota Used</span>
+                                              <span className="font-bold text-gray-800">{premiumUser.quota_used} / {premiumUser.quota_limit}</span>
+                                          </div>
+                                          <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                              <div className="h-full bg-green-500 rounded-full" style={{ width: `${Math.min((premiumUser.quota_used / premiumUser.quota_limit) * 100, 100)}%` }}></div>
+                                          </div>
+                                      </div>
+
+                                      <div className="flex items-center justify-between p-2 rounded-lg bg-orange-50/50 border border-orange-100 mb-2">
+                                          <div className="text-xs">
+                                              <span className="block text-gray-500">Expires On</span>
+                                              <span className="font-bold text-gray-800">{formatDate(premiumUser.end_date)}</span>
+                                          </div>
+                                      </div>
+
+                                      <button 
+                                        onClick={handleLogout}
+                                        className="w-full py-2 bg-gray-900 text-white text-xs font-bold rounded-lg hover:bg-gray-800 transition-colors"
+                                      >
+                                          Log Out
+                                      </button>
+                                  </div>
+                              )}
+                          </div>
+                      ) : (
+                          // LOGGED OUT STATE - Premium Button
+                          <button 
+                              onClick={() => setShowLoginModal(true)} 
+                              className="premium-btn group"
+                              title="Premium Login"
+                          >
+                              <span className="premium-ico group-hover:scale-110 transition-transform duration-200">
+                                  <Icons.Premium />
+                              </span>
+                          </button>
+                      )}
+                  </div>
+              </div>
+          </div>
+      </header>
+
+      <div className="container mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Left: Preview */}
+            <div className="lg:col-span-2 space-y-4">
+            <GlassCard className="p-2 flex flex-col items-center justify-center bg-gray-200 overflow-hidden relative group">
+                <div className="absolute inset-0 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:16px_16px] opacity-50"></div>
+                {/* Dynamic Aspect Ratio Box */}
+                <div className="relative w-full z-10 transition-transform duration-300" style={{ aspectRatio: `${template.width} / ${template.height}` }}>
+                    <canvas 
+                        ref={canvasRef}
+                        className="absolute top-0 left-0 w-full h-full shadow-2xl rounded-lg bg-white"
+                    />
+                </div>
+            </GlassCard>
+            
+            {/* Watermark Toggle */}
+            <div className="flex items-center justify-center gap-3 text-sm bg-white p-3 rounded-full shadow-sm border border-gray-100 w-fit mx-auto">
+                    <span className="text-gray-500 font-medium">Watermark</span>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                        <input 
+                            type="checkbox" 
+                            className="sr-only peer" 
+                            checked={!showWatermark} // Checkbox represents "No Watermark"
+                            onChange={() => {
+                                if(!premiumUser) {
+                                    triggerSubscription();
+                                } else {
+                                    setShowWatermark(!showWatermark); // Toggle state
+                                }
+                            }} 
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                    </label>
+                    <div className="flex items-center gap-1">
+                        <span className={`text-xs font-bold ${!showWatermark ? 'text-green-600' : 'text-gray-400'}`}>
+                            {!showWatermark ? 'REMOVED' : 'ACTIVE'}
+                        </span>
+                        {!premiumUser && <div className="text-yellow-500"><Icons.Lock /></div>}
+                    </div>
             </div>
-          </GlassCard>
+            </div>
+
+            {/* Right: Form */}
+            <div className="lg:col-span-1">
+            <GlassCard className="sticky top-24 border-t-4 border-t-red-500">
+                <h3 className="text-lg font-bold mb-6 pb-2 border-b border-gray-100 flex items-center gap-2">
+                    <span className="w-1 h-6 bg-red-500 rounded-full"></span>
+                    Customize Content
+                </h3>
+                
+                <div className="space-y-5">
+                {template.boxes.map(box => {
+                    if (box.type === BoxType.WATERMARK) return null; 
+                    if (box.type === BoxType.LOGO && box.staticUrl) return null;
+
+                    return (
+                    <div key={box.id} className="group">
+                        <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wide">
+                            {box.key.replace(/_/g, ' ')}
+                        </label>
+                        
+                        {box.type === BoxType.TEXT && (
+                            <textarea
+                                className="w-full p-3 rounded-xl bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-red-100 focus:border-red-400 outline-none resize-y min-h-[80px] text-sm transition-all shadow-sm"
+                                placeholder={`Enter ${box.key}...`}
+                                onChange={(e) => handleInputChange(box.key, e.target.value)}
+                                rows={3}
+                            />
+                        )}
+
+                        {box.type === BoxType.IMAGE && (
+                            <label className="flex items-center gap-3 p-3 border border-dashed border-gray-300 rounded-xl cursor-pointer hover:bg-gray-50 hover:border-red-300 transition-all bg-white">
+                                <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 group-hover:text-red-500 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                </div>
+                                <span className="text-sm text-gray-600 font-medium">Click to upload image</span>
+                                <input 
+                                    type="file" 
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                        if (e.target.files?.[0]) {
+                                            handleInputChange(box.key, e.target.files[0]);
+                                        }
+                                    }}
+                                />
+                            </label>
+                        )}
+                        
+                        {(box.type === BoxType.LOGO || box.type === BoxType.ADS) && !box.staticUrl && (
+                            <VisualSelect 
+                                placeholder={`Select ${box.type === BoxType.LOGO ? 'Logo' : 'Ad'}...`}
+                                assets={box.type === BoxType.LOGO ? assets.logos : assets.ads}
+                                selectedId={formData[box.key] as string}
+                                onChange={(id) => handleInputChange(box.key, id)}
+                            />
+                        )}
+                    </div>
+                    );
+                })}
+
+                <button 
+                    onClick={() => setShowDownloadModal(true)}
+                    disabled={generating}
+                    className={`w-full py-4 mt-4 rounded-xl font-bold text-white shadow-lg transform transition active:scale-[0.98] flex items-center justify-center gap-2 text-lg ${generating ? 'bg-gray-400' : 'bg-gradient-to-r from-red-500 to-red-700 hover:shadow-red-500/40'}`}
+                >
+                    {generating ? 'Processing...' : (
+                        <>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                            Download Card
+                        </>
+                    )}
+                </button>
+                </div>
+            </GlassCard>
+            </div>
         </div>
       </div>
     </div>
