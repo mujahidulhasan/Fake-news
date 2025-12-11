@@ -38,6 +38,7 @@ const Icons = {
   Layers: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>,
   ArrowUp: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>,
   ArrowDown: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>,
+  Watermark: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>,
 };
 
 const fileToBase64 = (file: File): Promise<string> => {
@@ -55,7 +56,7 @@ export const TemplateEditor: React.FC = () => {
   const [templateId, setTemplateId] = useState<string | null>(null);
   const [channelId, setChannelId] = useState('');
   const [backgroundUrl, setBackgroundUrl] = useState<string | null>(null);
-  const [watermarkUrl, setWatermarkUrl] = useState<string | null>(null); // New Template Specific Watermark
+  const [watermarkUrl, setWatermarkUrl] = useState<string | null>(null); // Kept for legacy compatibility
   const [boxes, setBoxes] = useState<BoxConfig[]>([]);
   const [selectedBoxId, setSelectedBoxId] = useState<string | null>(null);
   const [imgDimensions, setImgDimensions] = useState({ w: 800, h: 450 });
@@ -152,14 +153,14 @@ export const TemplateEditor: React.FC = () => {
     }
   };
 
-  const handleWatermarkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBoxImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, boxId: string) => {
       const file = e.target.files?.[0];
-      if(!file) return;
+      if (!file) return;
       try {
           const base64 = await fileToBase64(file);
-          setWatermarkUrl(base64);
-      } catch(e) { alert("Error uploading watermark"); }
-  };
+          updateBox(boxId, { staticUrl: base64 });
+      } catch (e) { alert("Error uploading image"); }
+  }
 
   const handleRefImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -238,11 +239,10 @@ export const TemplateEditor: React.FC = () => {
     alert("Template Saved Successfully!");
   };
 
-  // ... (Keep existing layout logic addBox, updateBox, moveLayer, drag logic)
   const addBox = (type: BoxType) => {
     const newBox: BoxConfig = {
       id: Date.now().toString(),
-      key: `field_${boxes.length + 1}`,
+      key: type === BoxType.WATERMARK ? 'watermark' : `field_${boxes.length + 1}`,
       type,
       x: 35, y: 35, w: 30, h: 15,
       color: '#000000',
@@ -252,11 +252,11 @@ export const TemplateEditor: React.FC = () => {
       verticalAlign: 'top',
       fitMode: 'cover',
       locked: false,
-      opacity: 1,
+      opacity: type === BoxType.WATERMARK ? 0.3 : 1, // Default lower opacity for watermark
       lineHeight: 1.2
     };
     if (type === BoxType.IMAGE) { newBox.w = 30; newBox.h = 30; }
-    if (type === BoxType.LOGO || type === BoxType.ADS) { newBox.w = 15; newBox.h = 15; }
+    if (type === BoxType.LOGO || type === BoxType.ADS || type === BoxType.WATERMARK) { newBox.w = 15; newBox.h = 15; newBox.fitMode = 'contain'; }
     
     setBoxes([...boxes, newBox]);
     setSelectedBoxId(newBox.id);
@@ -499,7 +499,8 @@ export const TemplateEditor: React.FC = () => {
                 >
                     <img src={backgroundUrl} alt="Template Background" className="w-full h-full object-contain pointer-events-none block" draggable={false} />
                     
-                    {watermarkUrl && (
+                    {/* Only show legacy watermark if present and no boxes. If editing, we prefer box watermarks. */}
+                    {watermarkUrl && boxes.filter(b => b.type === BoxType.WATERMARK).length === 0 && (
                         <div className="absolute inset-0 flex items-center justify-center opacity-40 pointer-events-none z-[1]">
                             <img src={watermarkUrl} className="w-1/3 object-contain" />
                         </div>
@@ -528,9 +529,10 @@ export const TemplateEditor: React.FC = () => {
                             onMouseDown={(e) => handleStart(e, box.id, 'drag')}
                             onTouchStart={(e) => handleStart(e, box.id, 'drag')}
                         >
-                            <div className={`w-full h-full flex items-center justify-center overflow-hidden border ${box.locked ? 'border-red-400 bg-red-500/10' : 'border-dashed border-gray-400 bg-black/10'}`}>
-                                {box.type === BoxType.TEXT ? (
-                                    <span 
+                            {/* Inner content of the box */}
+                            {box.type === BoxType.TEXT ? (
+                                <div className={`w-full h-full flex items-center justify-center overflow-hidden border ${box.locked ? 'border-red-400 bg-red-500/10' : 'border-dashed border-gray-400 bg-black/10'}`}>
+                                     <span 
                                         style={{ 
                                             fontFamily: box.fontFamily, 
                                             color: box.color, 
@@ -543,10 +545,14 @@ export const TemplateEditor: React.FC = () => {
                                     >
                                         {box.key}
                                     </span>
-                                ) : (
-                                    <span className="text-[10px] uppercase font-bold text-white bg-black/50 px-1 rounded">{box.type}</span>
-                                )}
-                            </div>
+                                </div>
+                            ) : box.type === BoxType.WATERMARK && box.staticUrl ? (
+                                <img src={box.staticUrl} className="w-full h-full object-contain pointer-events-none" />
+                            ) : (
+                                <div className={`w-full h-full flex items-center justify-center overflow-hidden border ${box.locked ? 'border-red-400 bg-red-500/10' : 'border-dashed border-gray-400 bg-black/10'}`}>
+                                     <span className="text-[10px] uppercase font-bold text-white bg-black/50 px-1 rounded">{box.type}</span>
+                                </div>
+                            )}
                             
                             {/* Resize Handle */}
                             {selectedBoxId === box.id && !box.locked && (
@@ -587,6 +593,18 @@ export const TemplateEditor: React.FC = () => {
                                         <button onClick={() => deleteBox(selectedBox.id)} className="p-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 border border-transparent hover:border-red-200"><Icons.Trash /></button>
                                     </div>
                                 </div>
+                                
+                                {selectedBox.type === BoxType.WATERMARK && (
+                                    <div className="mb-4">
+                                        <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">Watermark Image</label>
+                                        <label className="flex items-center gap-2 p-2 border border-gray-200 rounded cursor-pointer hover:bg-gray-50 bg-white">
+                                            {selectedBox.staticUrl ? <img src={selectedBox.staticUrl} className="w-8 h-8 object-contain" /> : <Icons.Image />}
+                                            <span className="text-xs text-gray-600">Upload Image</span>
+                                            <input type="file" accept="image/*" onChange={(e) => handleBoxImageUpload(e, selectedBox.id)} className="hidden" />
+                                        </label>
+                                    </div>
+                                )}
+
                                 <div className="space-y-4">
                                     <div>
                                         <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">ID Name</label>
@@ -671,12 +689,8 @@ export const TemplateEditor: React.FC = () => {
                                             Upload Ref Image
                                             <input type="file" accept="image/*" onChange={handleRefImageUpload} className="hidden" />
                                         </label>
-                                        <label className="flex-1 text-xs bg-white border rounded p-1 text-center cursor-pointer hover:bg-gray-50">
-                                            {watermarkUrl ? 'Change Watermark' : 'Add Watermark'}
-                                            <input type="file" accept="image/*" onChange={handleWatermarkUpload} className="hidden" />
-                                        </label>
+                                        {/* Removed the simple Add Watermark button to favor the Box based approach */}
                                     </div>
-                                    {watermarkUrl && <div className="text-xs text-green-600 font-bold text-center">Watermark Active</div>}
                                     {refImage && (
                                         <div>
                                             <label className="text-xs block text-yellow-700 mb-1">Ref Opacity: {Math.round(refOpacity * 100)}%</label>
@@ -695,7 +709,7 @@ export const TemplateEditor: React.FC = () => {
                                         return (
                                             <div key={box.id} onClick={() => setSelectedBoxId(box.id)} className={`p-3 rounded-lg border flex items-center justify-between cursor-pointer transition-all ${selectedBoxId === box.id ? 'bg-blue-50 border-primary shadow-sm' : 'bg-white border-gray-200 hover:border-blue-300'}`}>
                                                 <div className="flex items-center gap-3">
-                                                    <span className="p-1.5 bg-gray-100 rounded text-gray-600">{box.type === 'TEXT' ? <Icons.Text /> : <Icons.Image />}</span>
+                                                    <span className="p-1.5 bg-gray-100 rounded text-gray-600">{box.type === 'TEXT' ? <Icons.Text /> : box.type === 'WATERMARK' ? <Icons.Watermark /> : <Icons.Image />}</span>
                                                     <p className="text-xs font-bold text-gray-700 truncate w-24">{box.key}</p>
                                                 </div>
                                                 <div className="flex items-center gap-1">
@@ -721,7 +735,7 @@ export const TemplateEditor: React.FC = () => {
       {/* BOTTOM TOOLBAR */}
       <div className="bg-white border-t border-gray-200 p-2 shrink-0 z-30 pb-safe">
         <div className="flex justify-around items-center max-w-2xl mx-auto">
-            {[{ icon: Icons.Text, label: 'Text', type: BoxType.TEXT }, { icon: Icons.Image, label: 'Image', type: BoxType.IMAGE }, { icon: Icons.Star, label: 'Logo', type: BoxType.LOGO }, { icon: Icons.Ads, label: 'Ads', type: BoxType.ADS }].map((tool, idx) => (
+            {[{ icon: Icons.Text, label: 'Text', type: BoxType.TEXT }, { icon: Icons.Image, label: 'Image', type: BoxType.IMAGE }, { icon: Icons.Star, label: 'Logo', type: BoxType.LOGO }, { icon: Icons.Ads, label: 'Ads', type: BoxType.ADS }, { icon: Icons.Watermark, label: 'Watermark', type: BoxType.WATERMARK }].map((tool, idx) => (
                 <button key={idx} onClick={() => addBox(tool.type)} className="flex flex-col items-center justify-center w-14 h-14 text-gray-600 hover:text-primary active:scale-90 transition-transform">
                     <div className="p-2 bg-gray-100 rounded-xl mb-1"><tool.icon /></div>
                     <span className="text-[10px] font-medium">{tool.label}</span>

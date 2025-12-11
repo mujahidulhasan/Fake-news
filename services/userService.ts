@@ -21,6 +21,15 @@ export const UserService = {
         if (error) throw error;
     },
 
+    incrementQuota: async (id: string) => {
+        // First get current
+        const { data: user, error: fetchError } = await supabase.from('premium_users').select('quota_used').eq('id', id).single();
+        if(fetchError || !user) return;
+
+        const { error } = await supabase.from('premium_users').update({ quota_used: user.quota_used + 1 }).eq('id', id);
+        if (error) console.error("Failed to update quota", error);
+    },
+
     delete: async (id: string) => {
         const { error } = await supabase.from('premium_users').delete().eq('id', id);
         if (error) throw error;
@@ -31,7 +40,7 @@ export const UserService = {
             .from('premium_users')
             .select('*')
             .eq('username', username)
-            .eq('password', password) // In production, use hashing!
+            .eq('password', password)
             .single();
         
         if (error || !data) return null;

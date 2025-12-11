@@ -40,7 +40,7 @@ export interface Template {
   channelId: string;
   name: string;
   backgroundUrl: string; 
-  watermarkUrl?: string | null; // Template specific watermark
+  watermarkUrl?: string | null; // Template specific watermark (legacy/static)
   width: number; 
   height: number; 
   boxes: BoxConfig[];
@@ -74,6 +74,8 @@ export interface PremiumUser {
     start_date: string;
     end_date: string;
     is_active: boolean;
+    quota_limit: number;
+    quota_used: number;
 }
 
 export interface DeveloperInfo {

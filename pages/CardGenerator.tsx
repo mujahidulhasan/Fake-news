@@ -12,8 +12,7 @@ import { UserService } from '../services/userService';
 // Icons
 const Icons = {
     Back: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>,
-    Premium: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z"/></svg>,
-    Diamond: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3h12l4 6-10 13L2 9z"/><path d="M11 3 8 9l4 13 4-13-3-6"/><path d="M2 9h20"/></svg>,
+    Premium: () => <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="20" height="20"><path d="M3 7l3 9h12l3-9-6 4-3-4-3 4-6-4z" fill="#f4c64f"/></svg>,
     Lock: () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>,
     Check: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-green-500"><polyline points="20 6 9 17 4 12"/></svg>,
 };
@@ -122,8 +121,18 @@ export const CardGenerator: React.FC = () => {
       setShowWatermark(true);
   };
 
-  const processDownload = (quality: DownloadQuality) => {
+  const processDownload = async (quality: DownloadQuality) => {
       if (!canvasRef.current || !template) return;
+      
+      // Check Quota for premium users
+      if (premiumUser) {
+          if (premiumUser.quota_limit && premiumUser.quota_used >= premiumUser.quota_limit) {
+              alert("You have reached your download quota limit. Please contact admin.");
+              return;
+          }
+          await UserService.incrementQuota(premiumUser.id);
+      }
+
       setGenerating(true);
       setShowDownloadModal(false);
 
@@ -155,25 +164,31 @@ export const CardGenerator: React.FC = () => {
       setShowContactInfo(false);
   };
 
+  // Skeleton Loading Animation
   if (loading) {
       return (
         <div className="container mx-auto px-4 py-6 animate-pulse">
             <div className="flex justify-between items-center mb-6">
-                 <div className="h-8 w-32 bg-gray-300 rounded"></div>
-                 <div className="h-8 w-24 bg-gray-300 rounded"></div>
+                 <div className="flex items-center gap-4">
+                     <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
+                     <div className="h-8 w-48 bg-gray-200 rounded"></div>
+                 </div>
+                 <div className="h-10 w-32 bg-gray-200 rounded-xl"></div>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-4">
-                    <div className="w-full aspect-video bg-gray-300 rounded-2xl"></div>
-                    <div className="h-6 w-48 bg-gray-300 rounded mx-auto"></div>
+                    <div className="w-full aspect-video bg-gray-200 rounded-2xl"></div>
+                    <div className="h-6 w-32 bg-gray-200 rounded mx-auto mt-4"></div>
                 </div>
                 <div className="lg:col-span-1">
-                    <div className="h-96 bg-gray-200 rounded-2xl p-6 space-y-4">
-                         <div className="h-6 w-32 bg-gray-300 rounded mb-4"></div>
-                         <div className="h-10 w-full bg-gray-300 rounded"></div>
-                         <div className="h-10 w-full bg-gray-300 rounded"></div>
-                         <div className="h-10 w-full bg-gray-300 rounded"></div>
-                         <div className="h-12 w-full bg-red-200 rounded mt-6"></div>
+                    <div className="h-[500px] bg-white border border-gray-100 rounded-2xl p-6 space-y-6">
+                         <div className="h-6 w-40 bg-gray-200 rounded mb-6"></div>
+                         <div className="space-y-4">
+                            <div className="h-10 w-full bg-gray-100 rounded"></div>
+                            <div className="h-20 w-full bg-gray-100 rounded"></div>
+                            <div className="h-10 w-full bg-gray-100 rounded"></div>
+                         </div>
+                         <div className="h-12 w-full bg-gray-200 rounded mt-12"></div>
                     </div>
                 </div>
             </div>
@@ -195,10 +210,10 @@ export const CardGenerator: React.FC = () => {
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
               <GlassCard className="w-full max-w-sm p-6 relative">
                   <button onClick={() => setShowLoginModal(false)} className="absolute top-2 right-2 text-gray-500 hover:text-red-500">✕</button>
-                  <h2 className="text-xl font-bold mb-4 text-center">Premium Login</h2>
+                  <h2 className="text-xl font-bold mb-4 text-center text-gray-800">Premium Login</h2>
                   <form onSubmit={handleLogin} className="space-y-4">
-                      <input type="text" placeholder="Username" className="w-full p-2 border rounded bg-white/50" value={loginUser} onChange={e => setLoginUser(e.target.value)} />
-                      <input type="password" placeholder="Password" className="w-full p-2 border rounded bg-white/50" value={loginPass} onChange={e => setLoginPass(e.target.value)} />
+                      <input type="text" placeholder="Username" className="w-full p-2 border rounded bg-white/50 text-gray-800" value={loginUser} onChange={e => setLoginUser(e.target.value)} />
+                      <input type="password" placeholder="Password" className="w-full p-2 border rounded bg-white/50 text-gray-800" value={loginPass} onChange={e => setLoginPass(e.target.value)} />
                       <button type="submit" className="w-full py-2 bg-primary text-white rounded font-bold hover:bg-red-600">Login</button>
                   </form>
               </GlassCard>
@@ -307,7 +322,9 @@ export const CardGenerator: React.FC = () => {
       {/* Top Bar */}
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center">
-            <Link to="/" className="text-gray-500 hover:text-primary mr-4 p-2 bg-white rounded-full shadow-sm hover:shadow-md transition-all"><Icons.Back /></Link>
+            <Link to="/" className="text-gray-500 hover:text-primary mr-4 p-2 bg-white rounded-full shadow-sm hover:shadow-md transition-all">
+                <Icons.Back />
+            </Link>
             <h2 className="text-lg md:text-2xl font-bold text-gray-800 line-clamp-1">Create {template.name}</h2>
         </div>
         <div>
@@ -319,11 +336,10 @@ export const CardGenerator: React.FC = () => {
             ) : (
                 <button 
                     onClick={() => setShowLoginModal(true)} 
-                    className="relative overflow-hidden group bg-gradient-to-r from-gold-400 via-gold-500 to-gold-600 text-white text-sm font-bold py-2 px-4 rounded-full shadow-lg hover:shadow-yellow-500/50 transition-all active:scale-95 flex items-center gap-2"
+                    className="premium-btn"
+                    title="Premium Login"
                 >
-                    <div className="absolute top-0 -inset-full h-full w-1/2 z-5 block transform -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-40 group-hover:animate-shine" />
-                    <Icons.Premium />
-                    <span>Premium Login</span>
+                    <span className="premium-ico"><Icons.Premium /></span>
                 </button>
             )}
         </div>
@@ -372,7 +388,9 @@ export const CardGenerator: React.FC = () => {
             
             <div className="space-y-4">
               {template.boxes.map(box => {
-                if (box.type === BoxType.WATERMARK) return null;
+                // If it's a watermark box but using a static URL provided by template editor, hide it from user form
+                // Unless we decide watermarks should be user-editable (usually they aren't, they are fixed branding)
+                if (box.type === BoxType.WATERMARK) return null; 
                 if (box.type === BoxType.LOGO && box.staticUrl) return null;
 
                 return (
