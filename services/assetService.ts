@@ -57,7 +57,7 @@ export const AssetService = {
     if (error) console.error('Error deleting asset:', error.message);
   },
 
-  // --- SYSTEM SETTINGS (Dev Info, Site Logo, Admin Creds) ---
+  // --- SYSTEM SETTINGS ---
   
   getSystemSettings: async () => {
       const { data } = await supabase.from('system_settings').select('*');
@@ -74,6 +74,11 @@ export const AssetService = {
           else if(item.key === 'site_logo') settings.siteLogo = item.value;
           else if(item.key === 'site_logo_width') settings.siteLogoWidth = item.value;
           else if(item.key === 'site_logo_pos') settings.siteLogoPos = item.value;
+          else if(item.key === 'news_ticker_active') settings.newsTickerActive = item.value === 'true';
+          else if(item.key === 'news_ticker_text') settings.newsTickerText = item.value;
+          else if(item.key === 'popup_active') settings.popupActive = item.value === 'true';
+          else if(item.key === 'popup_content') settings.popupContent = item.value;
+          else if(item.key === 'popup_type') settings.popupType = item.value;
       });
       return settings;
   },
@@ -116,6 +121,18 @@ export const AssetService = {
       ];
       const { error } = await supabase.from('system_settings').upsert(updates);
       if (error) console.error("Error saving site logo", error);
+  },
+  
+  saveNotices: async (tickerActive: boolean, tickerText: string, popupActive: boolean, popupContent: string, popupType: 'TEXT'|'IMAGE') => {
+      const updates = [
+          { key: 'news_ticker_active', value: String(tickerActive) },
+          { key: 'news_ticker_text', value: tickerText },
+          { key: 'popup_active', value: String(popupActive) },
+          { key: 'popup_content', value: popupContent },
+          { key: 'popup_type', value: popupType }
+      ];
+      const { error } = await supabase.from('system_settings').upsert(updates);
+      if(error) console.error("Error saving notices", error);
   },
 
   // --- BACKUP & RECOVERY ---
@@ -171,18 +188,11 @@ export const AssetService = {
 
                   const { channels, assets, templates, premium_users, system_settings, fonts } = json.data;
 
-                  // Restore in specific order to satisfy potential foreign keys (if strict mode was on, but Supabase usually handles upserts well)
-                  // 1. Channels
                   if (channels?.length) await supabase.from('channels').upsert(channels);
-                  // 2. Assets
                   if (assets?.length) await supabase.from('assets').upsert(assets);
-                  // 3. Templates
                   if (templates?.length) await supabase.from('templates').upsert(templates);
-                  // 4. Users
                   if (premium_users?.length) await supabase.from('premium_users').upsert(premium_users);
-                  // 5. Settings
                   if (system_settings?.length) await supabase.from('system_settings').upsert(system_settings);
-                  // 6. Fonts
                   if (fonts?.length) await supabase.from('fonts').upsert(fonts);
 
                   resolve();

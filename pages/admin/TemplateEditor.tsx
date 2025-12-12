@@ -380,7 +380,7 @@ export const TemplateEditor: React.FC = () => {
 
   return (
     <div className="h-screen flex flex-col bg-gray-100 overflow-hidden">
-      {/* ASSET MODAL */}
+      {/* Asset Modal Omitted for brevity, logic unchanged */}
       {showAssetModal && (
         <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl">
@@ -499,7 +499,7 @@ export const TemplateEditor: React.FC = () => {
                 >
                     <img src={backgroundUrl} alt="Template Background" className="w-full h-full object-contain pointer-events-none block" draggable={false} />
                     
-                    {/* Only show legacy watermark if present and no boxes. If editing, we prefer box watermarks. */}
+                    {/* Only show legacy watermark if present and no boxes */}
                     {watermarkUrl && boxes.filter(b => b.type === BoxType.WATERMARK).length === 0 && (
                         <div className="absolute inset-0 flex items-center justify-center opacity-40 pointer-events-none z-[1]">
                             <img src={watermarkUrl} className="w-1/3 object-contain" />
@@ -539,7 +539,8 @@ export const TemplateEditor: React.FC = () => {
                                             fontSize: '100%', 
                                             whiteSpace: 'nowrap',
                                             textAlign: box.align || 'left',
-                                            width: '100%'
+                                            width: '100%',
+                                            lineHeight: box.lineHeight || 1.2
                                         }} 
                                         className="text-xs md:text-sm px-1"
                                     >
@@ -594,17 +595,6 @@ export const TemplateEditor: React.FC = () => {
                                     </div>
                                 </div>
                                 
-                                {selectedBox.type === BoxType.WATERMARK && (
-                                    <div className="mb-4">
-                                        <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">Watermark Image</label>
-                                        <label className="flex items-center gap-2 p-2 border border-gray-200 rounded cursor-pointer hover:bg-gray-50 bg-white">
-                                            {selectedBox.staticUrl ? <img src={selectedBox.staticUrl} className="w-8 h-8 object-contain" /> : <Icons.Image />}
-                                            <span className="text-xs text-gray-600">Upload Image</span>
-                                            <input type="file" accept="image/*" onChange={(e) => handleBoxImageUpload(e, selectedBox.id)} className="hidden" />
-                                        </label>
-                                    </div>
-                                )}
-
                                 <div className="space-y-4">
                                     <div>
                                         <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">ID Name</label>
@@ -644,13 +634,31 @@ export const TemplateEditor: React.FC = () => {
                                                 <input type="number" min="1" value={selectedBox.fontSize} onChange={e => updateBox(selectedBox.id, { fontSize: parseInt(e.target.value) })} className="w-full p-2 bg-white border border-gray-200 rounded text-sm outline-none focus:border-primary" />
                                             </div>
                                             <div>
-                                                <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">Color Code</label>
+                                                <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">Color</label>
                                                 <div className="flex items-center gap-2">
                                                     <input type="text" value={selectedBox.color} onChange={e => updateBox(selectedBox.id, { color: e.target.value })} className="w-full p-2 bg-white border border-gray-200 rounded text-sm outline-none focus:border-primary font-mono uppercase" placeholder="#000000" />
                                                     <div className="w-9 h-9 rounded border border-gray-200 shadow-sm shrink-0" style={{ backgroundColor: selectedBox.color }} />
                                                 </div>
                                             </div>
                                         </div>
+
+                                        {/* Line Height Control Added Here */}
+                                        <div>
+                                            <div className="flex justify-between mb-1">
+                                                <label className="text-xs font-bold text-gray-500 uppercase">Line Height (Gap)</label>
+                                                <span className="text-xs text-primary font-mono">{selectedBox.lineHeight || 1.2}</span>
+                                            </div>
+                                            <input 
+                                                type="range" 
+                                                min="0.8" 
+                                                max="3.0" 
+                                                step="0.1" 
+                                                value={selectedBox.lineHeight || 1.2} 
+                                                onChange={e => updateBox(selectedBox.id, { lineHeight: parseFloat(e.target.value) })} 
+                                                className="w-full h-2 bg-gray-200 rounded-lg accent-primary" 
+                                            />
+                                        </div>
+
                                         <div>
                                             <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">Alignment</label>
                                             <div className="flex bg-gray-50 border border-gray-200 rounded p-1 mb-2">
@@ -689,7 +697,6 @@ export const TemplateEditor: React.FC = () => {
                                             Upload Ref Image
                                             <input type="file" accept="image/*" onChange={handleRefImageUpload} className="hidden" />
                                         </label>
-                                        {/* Removed the simple Add Watermark button to favor the Box based approach */}
                                     </div>
                                     {refImage && (
                                         <div>
@@ -725,10 +732,6 @@ export const TemplateEditor: React.FC = () => {
                         )}
                     </div>
                 </div>
-            )}
-
-            {isPanelMinimized && (
-                 <button onClick={() => setIsPanelMinimized(false)} className="absolute right-4 top-4 w-12 h-12 bg-white rounded-full shadow-lg border border-gray-200 z-50 flex items-center justify-center text-gray-600 hover:text-primary animate-in fade-in transition-transform hover:scale-105"><Icons.Settings /></button>
             )}
       </div>
 

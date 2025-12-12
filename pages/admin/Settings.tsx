@@ -19,6 +19,13 @@ export const Settings: React.FC = () => {
         socials: { facebook: '', whatsapp: '', email: '', youtube: '' }
     });
     
+    // Notices
+    const [tickerActive, setTickerActive] = useState(false);
+    const [tickerText, setTickerText] = useState('');
+    const [popupActive, setPopupActive] = useState(false);
+    const [popupType, setPopupType] = useState<'TEXT' | 'IMAGE'>('TEXT');
+    const [popupContent, setPopupContent] = useState('');
+    
     // Backup
     const [restoring, setRestoring] = useState(false);
 
@@ -34,6 +41,13 @@ export const Settings: React.FC = () => {
             setSiteLogo(settings.siteLogo || '');
             setSiteLogoWidth(settings.siteLogoWidth || '150');
             setSiteLogoPos(settings.siteLogoPos || '0');
+            
+            // Load Notices
+            setTickerActive(settings.newsTickerActive);
+            setTickerText(settings.newsTickerText || '');
+            setPopupActive(settings.popupActive);
+            setPopupContent(settings.popupContent || '');
+            setPopupType(settings.popupType || 'TEXT');
 
             // Load Dev Info
             setDevInfo({
@@ -61,11 +75,27 @@ export const Settings: React.FC = () => {
             reader.readAsDataURL(file);
         }
     };
+    
+    const handlePopupImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if(file) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                setPopupContent(ev.target?.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    }
 
     const saveSiteConfig = async () => {
         await AssetService.saveSiteLogo(siteLogo, siteLogoWidth, siteLogoPos);
         alert('Site Configuration Saved!');
     };
+    
+    const saveNotices = async () => {
+        await AssetService.saveNotices(tickerActive, tickerText, popupActive, popupContent, popupType);
+        alert("Notices Saved!");
+    }
 
     const handleDevPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -176,13 +206,43 @@ export const Settings: React.FC = () => {
                                 onChange={e => setSiteLogoPos(e.target.value)} 
                                 className="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer"
                             />
-                            <div className="flex justify-between text-[10px] text-gray-400 mt-1">
-                                <span>Left</span>
-                                <span>Right</span>
-                            </div>
                         </div>
 
                         <button onClick={saveSiteConfig} className="bg-blue-600 text-white px-4 py-2 rounded w-full font-bold">Save Branding</button>
+                    </div>
+                </GlassCard>
+                
+                {/* Notices (Ticker & Popup) */}
+                <GlassCard className="p-6">
+                    <h3 className="text-lg font-bold mb-4 text-gray-700">Notices & Popups</h3>
+                    <div className="space-y-4">
+                        <div className="p-3 bg-yellow-50 rounded border border-yellow-100">
+                             <div className="flex justify-between items-center mb-2">
+                                <label className="font-bold text-gray-700 text-xs uppercase">Scrolling News Ticker</label>
+                                <input type="checkbox" checked={tickerActive} onChange={e => setTickerActive(e.target.checked)} className="w-4 h-4 accent-green-600" />
+                             </div>
+                             <textarea rows={2} className="w-full text-xs p-2 border rounded" placeholder="Enter scrolling text..." value={tickerText} onChange={e => setTickerText(e.target.value)} />
+                        </div>
+                        
+                        <div className="p-3 bg-blue-50 rounded border border-blue-100">
+                             <div className="flex justify-between items-center mb-2">
+                                <label className="font-bold text-gray-700 text-xs uppercase">Popup Notice</label>
+                                <input type="checkbox" checked={popupActive} onChange={e => setPopupActive(e.target.checked)} className="w-4 h-4 accent-green-600" />
+                             </div>
+                             <div className="flex gap-2 mb-2">
+                                 <button onClick={() => setPopupType('TEXT')} className={`flex-1 text-xs py-1 rounded border ${popupType === 'TEXT' ? 'bg-blue-500 text-white border-blue-600' : 'bg-white text-gray-600'}`}>Text</button>
+                                 <button onClick={() => setPopupType('IMAGE')} className={`flex-1 text-xs py-1 rounded border ${popupType === 'IMAGE' ? 'bg-blue-500 text-white border-blue-600' : 'bg-white text-gray-600'}`}>Image</button>
+                             </div>
+                             {popupType === 'TEXT' ? (
+                                 <textarea rows={3} className="w-full text-xs p-2 border rounded" placeholder="Popup message..." value={popupContent} onChange={e => setPopupContent(e.target.value)} />
+                             ) : (
+                                 <div>
+                                     {popupContent && <img src={popupContent} className="h-16 w-full object-contain bg-gray-200 mb-2 rounded" />}
+                                     <input type="file" accept="image/*" onChange={handlePopupImageUpload} className="w-full text-xs" />
+                                 </div>
+                             )}
+                        </div>
+                        <button onClick={saveNotices} className="bg-green-600 text-white px-4 py-2 rounded w-full font-bold">Save Notices</button>
                     </div>
                 </GlassCard>
 

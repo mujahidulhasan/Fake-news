@@ -3,9 +3,21 @@ import { supabase } from './supabaseClient';
 
 export const ChannelService = {
   getAll: async (): Promise<Channel[]> => {
-    const { data, error } = await supabase
+    // Attempt to fetch with sorting on new columns
+    let { data, error } = await supabase
       .from('channels')
-      .select('*');
+      .select('*')
+      .order('is_pinned', { ascending: false }) 
+      .order('created_at', { ascending: false });
+    
+    // Fallback: If is_pinned or created_at doesn't exist, fetch without specific sorting
+    // Error code 42703 is undefined_column in Postgres
+    if (error && (error.message?.includes('is_pinned') || error.code === '42703')) {
+        console.warn("Schema mismatch: Missing columns. Falling back to basic fetch.");
+        const result = await supabase.from('channels').select('*');
+        data = result.data;
+        error = result.error;
+    }
     
     if (error) {
       console.error('Error fetching channels:', error.message);
@@ -18,7 +30,11 @@ export const ChannelService = {
         name: c.name,
         slug: c.slug,
         logoUrl: c.logo_url,
-        description: c.description
+        description: c.description,
+        category: c.category || 'General',
+        isPinned: !!c.is_pinned,
+        usageCount: c.usage_count || 0,
+        createdAt: c.created_at || new Date().toISOString()
     }));
   },
 
@@ -40,22 +56,56 @@ export const ChannelService = {
         name: c.name,
         slug: c.slug,
         logoUrl: c.logo_url,
-        description: c.description
+        description: c.description,
+        category: c.category || 'General',
+        isPinned: !!c.is_pinned,
+        usageCount: c.usage_count || 0,
+        createdAt: c.created_at || new Date().toISOString()
     };
   },
 
   save: async (channel: Channel): Promise<void> => {
-    const { error } = await supabase
-      .from('channels')
-      .upsert({
+    const payload: any = {
         _id: channel._id,
         name: channel.name,
         slug: channel.slug,
         logo_url: channel.logoUrl,
-        description: channel.description
-      });
+        description: channel.description,
+        category: channel.category,
+        is_pinned: channel.isPinned,
+    };
 
-    if (error) console.error('Error saving channel:', error.message);
+    const { error } = await supabase
+      .from('channels')
+      .upsert(payload);
+
+    if (error) {
+        // Fallback: If update fails due to missing column, try saving legacy fields only
+        if (error.message?.includes('column') || error.code === '42703') {
+            console.warn("Schema mismatch during save. Retrying with legacy fields.");
+            delete payload.category;
+            delete payload.is_pinned;
+            // usage_count is usually not updated here, but if we had it, we'd delete it too
+            const retry = await supabase.from('channels').upsert(payload);
+            if (retry.error) console.error('Error saving channel (fallback):', retry.error.message);
+        } else {
+            console.error('Error saving channel:', error.message);
+        }
+    }
+  },
+  
+  incrementUsage: async (id: string) => {
+      // Try RPC
+      const { error: rpcError } = await supabase.rpc('increment_channel_usage', { row_id: id });
+      
+      if (rpcError) {
+          // Fallback: Manual update check
+          const { data: curr, error: fetchError } = await supabase.from('channels').select('usage_count').eq('_id', id).single();
+          // Only update if no error fetching (implies column exists) and record found
+          if (!fetchError && curr) {
+              await supabase.from('channels').update({ usage_count: (curr.usage_count || 0) + 1 }).eq('_id', id);
+          }
+      }
   },
 
   delete: async (id: string): Promise<void> => {

@@ -61,6 +61,10 @@ export interface Channel {
   slug: string;
   logoUrl: string;
   description?: string;
+  category?: string; // New: For grouping
+  isPinned?: boolean; // New: For pinning to top
+  usageCount?: number; // New: For Hot badge
+  createdAt?: string; // New: For New Badge
 }
 
 export interface UserFormData {

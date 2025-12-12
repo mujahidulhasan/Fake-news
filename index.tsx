@@ -1,4 +1,4 @@
-import React, { Component, ReactNode, useEffect } from 'react';
+import React, { ReactNode, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { PublicLanding } from './pages/PublicLanding';
@@ -21,9 +21,11 @@ interface ErrorBoundaryState {
   error: any;
 }
 
-class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  // Define state as a class property to satisfy TypeScript strict property initialization
-  public state: ErrorBoundaryState = { hasError: false, error: null };
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
 
   static getDerivedStateFromError(error: any) {
     return { hasError: true, error };

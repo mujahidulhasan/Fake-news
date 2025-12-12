@@ -8,6 +8,7 @@ import { TemplateService } from '../services/templateService';
 import { AssetService } from '../services/assetService';
 import { FontService } from '../services/fontService';
 import { UserService } from '../services/userService';
+import { ChannelService } from '../services/channelService';
 
 // Icons
 const Icons = {
@@ -148,6 +149,11 @@ export const CardGenerator: React.FC = () => {
   const processDownload = async (quality: DownloadQuality) => {
       if (!canvasRef.current || !template) return;
       
+      // Update Usage Stats for "Hot" Badge
+      if (channelId) {
+          await ChannelService.incrementUsage(channelId);
+      }
+
       // Check Quota for premium users
       if (premiumUser) {
           if (premiumUser.quota_limit && premiumUser.quota_used >= premiumUser.quota_limit) {

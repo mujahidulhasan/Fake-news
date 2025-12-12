@@ -15,6 +15,13 @@ export const PublicLanding: React.FC = () => {
   const [siteLogoWidth, setSiteLogoWidth] = useState('150');
   const [siteLogoPos, setSiteLogoPos] = useState('0'); // 0-100
   
+  // Notices
+  const [tickerActive, setTickerActive] = useState(false);
+  const [tickerText, setTickerText] = useState('');
+  const [showPopup, setShowPopup] = useState(false);
+  const [popupContent, setPopupContent] = useState('');
+  const [popupType, setPopupType] = useState('TEXT');
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -34,6 +41,17 @@ export const PublicLanding: React.FC = () => {
         setSiteLogo(settings.siteLogo || '');
         setSiteLogoWidth(settings.siteLogoWidth || '150');
         setSiteLogoPos(settings.siteLogoPos || '0');
+        
+        // Notices
+        setTickerActive(settings.newsTickerActive);
+        setTickerText(settings.newsTickerText);
+        
+        if (settings.popupActive) {
+            // Show popup logic - basic implementation shows on load
+            setPopupContent(settings.popupContent);
+            setPopupType(settings.popupType);
+            setShowPopup(true);
+        }
     };
     fetchChannels();
     fetchSettings();
@@ -43,11 +61,52 @@ export const PublicLanding: React.FC = () => {
     c.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Group by Category
+  const groupedChannels: { [key: string]: Channel[] } = {};
+  filteredChannels.forEach(c => {
+      const cat = c.category || 'Popular Channels';
+      if (!groupedChannels[cat]) groupedChannels[cat] = [];
+      groupedChannels[cat].push(c);
+  });
+
+  // Check badges logic
+  const isNew = (dateStr?: string) => {
+      if (!dateStr) return false;
+      const created = new Date(dateStr).getTime();
+      const threeDays = 3 * 24 * 60 * 60 * 1000;
+      return (Date.now() - created) < threeDays;
+  };
+
+  const isHot = (usage?: number) => {
+      return (usage || 0) > 50; // Threshold for hot badge
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-200 font-sans flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-200 font-sans flex flex-col relative overflow-x-hidden">
+      
+      {/* Popup Modal */}
+      {showPopup && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in">
+              <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full relative overflow-hidden">
+                  <button onClick={() => setShowPopup(false)} className="absolute top-2 right-2 bg-gray-100 hover:bg-red-500 hover:text-white rounded-full p-1.5 transition-colors z-10">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                  <div className="p-6">
+                      <h3 className="text-xl font-bold text-center mb-4 text-gray-800">Notice</h3>
+                      {popupType === 'IMAGE' ? (
+                          <img src={popupContent} alt="Notice" className="w-full rounded-lg" />
+                      ) : (
+                          <p className="text-gray-600 text-center whitespace-pre-wrap">{popupContent}</p>
+                      )}
+                      <button onClick={() => setShowPopup(false)} className="w-full mt-6 py-2 bg-primary text-white font-bold rounded-lg hover:bg-red-600">Close</button>
+                  </div>
+              </div>
+          </div>
+      )}
+
       {/* Navigation Bar */}
-      <nav className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-gray-200 shadow-sm relative h-16">
-        <div className="container mx-auto h-full px-4 relative flex items-center">
+      <nav className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-gray-200 shadow-sm relative">
+        <div className="h-16 container mx-auto px-4 relative flex items-center">
             {siteLogo && (
                 <div 
                     className="absolute top-1/2 transition-all duration-300 transform -translate-y-1/2"
@@ -60,8 +119,26 @@ export const PublicLanding: React.FC = () => {
                     <img src={siteLogo} className="w-full object-contain max-h-12" alt="Logo" />
                 </div>
             )}
-            {/* If no site logo, we show nothing as requested */}
         </div>
+        
+        {/* Scrolling Ticker */}
+        {tickerActive && tickerText && (
+            <div className="bg-red-600 text-white h-8 flex items-center overflow-hidden relative border-t border-red-700">
+                <div className="absolute whitespace-nowrap animate-marquee left-full pl-4 font-bold text-sm tracking-wide">
+                    {tickerText}
+                </div>
+                {/* CSS Animation defined in index.html or tailwind config usually. Using inline style/hack for standard CSS injection if needed, but 'animate-marquee' is standard tailwind extension often used, or we define it below */}
+                <style dangerouslySetInnerHTML={{__html: `
+                    @keyframes marquee {
+                        0% { transform: translateX(0); }
+                        100% { transform: translateX(-100%); }
+                    }
+                    .animate-marquee {
+                        animation: marquee 20s linear infinite;
+                    }
+                `}} />
+            </div>
+        )}
       </nav>
 
       <div className="container mx-auto px-4 py-12 flex-1">
@@ -89,37 +166,64 @@ export const PublicLanding: React.FC = () => {
           </div>
         </div>
 
-        <div className="mb-8">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6 px-2 border-l-4 border-primary pl-3">জনপ্রিয় চ্যানেলসমূহ</h2>
-            
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {filteredChannels.map((channel) => (
-                <div 
-                    key={channel._id} 
-                    onClick={() => navigate(`/create/${channel._id}`)}
-                    className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer hover:shadow-lg hover:border-primary/30 transition-all duration-300 group flex flex-col"
-                >
-                    <div className="aspect-video w-full bg-gray-50 flex items-center justify-center p-6 border-b border-gray-100 group-hover:bg-gray-100 transition-colors">
-                         {channel.logoUrl ? (
-                             <img src={channel.logoUrl} alt={channel.name} className="w-full h-full object-contain transform group-hover:scale-105 transition-transform duration-300" />
-                         ) : (
-                             <span className="text-gray-300 font-bold text-xl">{channel.name[0]}</span>
-                         )}
-                    </div>
-                    <div className="p-4 text-center">
-                        <h3 className="text-lg font-bold text-gray-800 group-hover:text-primary transition-colors">{channel.name}</h3>
-                        <p className="text-xs text-gray-500 mt-1 line-clamp-2">{channel.description || 'সংবাদ দেখুন'}</p>
+        {/* Categories Sections */}
+        {Object.keys(groupedChannels).length > 0 ? (
+            Object.entries(groupedChannels).map(([category, catChannels]) => (
+                <div key={category} className="mb-12">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-6 px-2 border-l-4 border-primary pl-3 flex items-center gap-2">
+                        {category}
+                        <span className="text-xs font-normal text-gray-400 bg-gray-100 px-2 py-1 rounded-full">{catChannels.length}</span>
+                    </h2>
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {catChannels.map((channel) => (
+                        <div 
+                            key={channel._id} 
+                            onClick={() => navigate(`/create/${channel._id}`)}
+                            className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer hover:shadow-lg hover:border-primary/30 transition-all duration-300 group flex flex-col relative"
+                        >
+                            {/* Pin Badge */}
+                            {channel.isPinned && (
+                                <div className="absolute top-2 right-2 z-10 bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm flex items-center gap-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg>
+                                    PIN
+                                </div>
+                            )}
+
+                            {/* New Badge */}
+                            {!channel.isPinned && isNew(channel.createdAt) && (
+                                <div className="absolute top-2 right-2 z-10 bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm">NEW</div>
+                            )}
+
+                            {/* Hot Badge */}
+                            {!channel.isPinned && !isNew(channel.createdAt) && isHot(channel.usageCount) && (
+                                <div className="absolute top-2 right-2 z-10 bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm flex items-center gap-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.207-4.009.022-4.95a.5.5 0 00-.59-.592C8.983 3.561 7.054 4.088 6.096 6.331a6.345 6.345 0 00-.337 1.282c-.225 1.78.502 2.893 1.241 3.887l.006.009V14.5z"/><path d="M12 21a6.005 6.005 0 01-3.699-10.716 5.864 5.864 0 011.666-1.579.5.5 0 01.766.425c0 .037-.001.074-.002.111a4.5 4.5 0 106.848 1.487.5.5 0 01.892-.373A5.996 5.996 0 0112 21z"/></svg>
+                                    HOT
+                                </div>
+                            )}
+
+                            <div className="aspect-video w-full bg-gray-50 flex items-center justify-center p-6 border-b border-gray-100 group-hover:bg-gray-100 transition-colors">
+                                 {channel.logoUrl ? (
+                                     <img src={channel.logoUrl} alt={channel.name} className="w-full h-full object-contain transform group-hover:scale-105 transition-transform duration-300" />
+                                 ) : (
+                                     <span className="text-gray-300 font-bold text-xl">{channel.name[0]}</span>
+                                 )}
+                            </div>
+                            <div className="p-4 text-center">
+                                <h3 className="text-lg font-bold text-gray-800 group-hover:text-primary transition-colors">{channel.name}</h3>
+                                <p className="text-xs text-gray-500 mt-1 line-clamp-2">{channel.description || 'সংবাদ দেখুন'}</p>
+                            </div>
+                        </div>
+                        ))}
                     </div>
                 </div>
-                ))}
+            ))
+        ) : (
+            <div className="text-center py-10 text-gray-500">
+                কোন চ্যানেল পাওয়া যায়নি
             </div>
-            
-            {filteredChannels.length === 0 && (
-                <div className="text-center py-10 text-gray-500">
-                    কোন চ্যানেল পাওয়া যায়নি
-                </div>
-            )}
-        </div>
+        )}
       </div>
 
       <footer className="bg-white border-t border-gray-200 mt-10">
