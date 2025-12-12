@@ -127,14 +127,14 @@ export const PublicLanding: React.FC = () => {
                 <div className="absolute whitespace-nowrap animate-marquee left-full pl-4 font-bold text-sm tracking-wide">
                     {tickerText}
                 </div>
-                {/* CSS Animation defined in index.html or tailwind config usually. Using inline style/hack for standard CSS injection if needed, but 'animate-marquee' is standard tailwind extension often used, or we define it below */}
+                {/* Updated Speed from 20s to 10s */}
                 <style dangerouslySetInnerHTML={{__html: `
                     @keyframes marquee {
                         0% { transform: translateX(0); }
                         100% { transform: translateX(-100%); }
                     }
                     .animate-marquee {
-                        animation: marquee 20s linear infinite;
+                        animation: marquee 10s linear infinite;
                     }
                 `}} />
             </div>

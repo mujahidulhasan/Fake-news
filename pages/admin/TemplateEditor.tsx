@@ -56,7 +56,7 @@ export const TemplateEditor: React.FC = () => {
   const [templateId, setTemplateId] = useState<string | null>(null);
   const [channelId, setChannelId] = useState('');
   const [backgroundUrl, setBackgroundUrl] = useState<string | null>(null);
-  const [watermarkUrl, setWatermarkUrl] = useState<string | null>(null); // Kept for legacy compatibility
+  const [watermarkUrl, setWatermarkUrl] = useState<string | null>(null); 
   const [boxes, setBoxes] = useState<BoxConfig[]>([]);
   const [selectedBoxId, setSelectedBoxId] = useState<string | null>(null);
   const [imgDimensions, setImgDimensions] = useState({ w: 800, h: 450 });
@@ -160,6 +160,15 @@ export const TemplateEditor: React.FC = () => {
           const base64 = await fileToBase64(file);
           updateBox(boxId, { staticUrl: base64 });
       } catch (e) { alert("Error uploading image"); }
+  }
+  
+  const handleWatermarkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      try {
+          const base64 = await fileToBase64(file);
+          setWatermarkUrl(base64);
+      } catch (e) { alert("Error uploading watermark"); }
   }
 
   const handleRefImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -318,9 +327,19 @@ export const TemplateEditor: React.FC = () => {
     dragRef.current = {
       id, mode, startX: coords.x, startY: coords.y,
       startXVal: mode === 'drag' ? box.x : box.w,
+      startYVal: mode === 'drag' ? box.h : box.h, // Bug fix: previously used box.h for startYVal in drag mode? No wait.
+      // Correction:
+      // startXVal: mode === 'drag' ? box.x : box.w,
+      // startYVal: mode === 'drag' ? box.y : box.h,
+    };
+    // Re-assign correctly for drag vs resize logic:
+    dragRef.current = {
+      id, mode, startX: coords.x, startY: coords.y,
+      startXVal: mode === 'drag' ? box.x : box.w,
       startYVal: mode === 'drag' ? box.y : box.h,
       containerW: rect.width, containerH: rect.height
     };
+
     setSelectedBoxId(id);
     setHitBoundary(false);
   };
@@ -547,7 +566,7 @@ export const TemplateEditor: React.FC = () => {
                                         {box.key}
                                     </span>
                                 </div>
-                            ) : box.type === BoxType.WATERMARK && box.staticUrl ? (
+                            ) : (box.type === BoxType.WATERMARK || box.type === BoxType.LOGO || box.type === BoxType.ADS || box.type === BoxType.IMAGE) && box.staticUrl ? (
                                 <img src={box.staticUrl} className="w-full h-full object-contain pointer-events-none" />
                             ) : (
                                 <div className={`w-full h-full flex items-center justify-center overflow-hidden border ${box.locked ? 'border-red-400 bg-red-500/10' : 'border-dashed border-gray-400 bg-black/10'}`}>
@@ -678,6 +697,22 @@ export const TemplateEditor: React.FC = () => {
                                         </div>
                                     </div>
                                 )}
+                                
+                                {selectedBox.type !== BoxType.TEXT && (
+                                    <div className="border-t border-dashed border-gray-200 pt-4 mt-2">
+                                         <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">Static Image Source</label>
+                                         <p className="text-[10px] text-gray-400 mb-2">Upload an image to make this box always show specific content (e.g. a watermark or fixed logo).</p>
+                                         {selectedBox.staticUrl && <img src={selectedBox.staticUrl} className="w-full h-20 object-contain bg-gray-100 border rounded mb-2" />}
+                                         <div className="flex gap-2">
+                                             <label className="flex-1 p-2 bg-gray-100 border border-gray-200 rounded cursor-pointer hover:bg-gray-200 text-gray-600 flex items-center justify-center text-xs font-bold">
+                                                <Icons.Upload /> <span className="ml-1">Upload Image</span>
+                                                <input type="file" accept="image/*" className="hidden" onChange={(e) => handleBoxImageUpload(e, selectedBox.id)} />
+                                             </label>
+                                             {selectedBox.staticUrl && <button onClick={() => updateBox(selectedBox.id, { staticUrl: undefined })} className="p-2 bg-red-100 text-red-500 rounded"><Icons.Trash /></button>}
+                                         </div>
+                                    </div>
+                                )}
+                                
                                 <div className="border-t border-dashed border-gray-200 pt-4 mt-2">
                                     <label className="block text-xs font-bold text-gray-500 mb-2 uppercase">Box Position</label>
                                     <div className="grid grid-cols-3 gap-2">
@@ -691,6 +726,20 @@ export const TemplateEditor: React.FC = () => {
 
                         {activeTab === 'layers' && (
                             <div>
+                                {/* Global Watermark Section */}
+                                <div className="mb-4 p-3 bg-blue-50 rounded border border-blue-200 space-y-2">
+                                    <label className="text-xs font-bold text-blue-800 uppercase block">Global Watermark (Overlay)</label>
+                                    <div className="flex gap-2 items-center">
+                                        {watermarkUrl && <img src={watermarkUrl} className="h-8 w-8 object-contain bg-white border rounded" />}
+                                        <label className="flex-1 text-xs bg-white border rounded p-1.5 text-center cursor-pointer hover:bg-gray-50 text-blue-600 font-bold">
+                                            {watermarkUrl ? 'Replace Watermark' : 'Upload Watermark'}
+                                            <input type="file" accept="image/*" onChange={handleWatermarkUpload} className="hidden" />
+                                        </label>
+                                        {watermarkUrl && <button onClick={() => setWatermarkUrl(null)} className="p-1.5 bg-red-100 text-red-600 rounded"><Icons.Trash /></button>}
+                                    </div>
+                                    <p className="text-[10px] text-blue-400">This image overlays the entire card and is hidden for premium users.</p>
+                                </div>
+
                                 <div className="mb-4 p-3 bg-yellow-50 rounded border border-yellow-200 space-y-2">
                                     <div className="flex gap-2">
                                         <label className="flex-1 text-xs bg-white border rounded p-1 text-center cursor-pointer hover:bg-gray-50">
