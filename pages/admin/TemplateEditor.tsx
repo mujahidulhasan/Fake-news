@@ -605,6 +605,17 @@ export const TemplateEditor: React.FC = () => {
                 </div>
             )}
 
+            {/* RESTORE PANEL BUTTON (When Minimized) */}
+            {isPanelMinimized && (
+              <button
+                onClick={() => setIsPanelMinimized(false)}
+                className="absolute right-4 top-20 bg-white p-3 rounded-full shadow-xl border border-gray-200 text-gray-700 hover:text-primary z-50 animate-in fade-in"
+                title="Open Settings"
+              >
+                <Icons.Settings />
+              </button>
+            )}
+
             {/* FLOATING PANEL */}
             {!isPanelMinimized && (selectedBox || activeTab === 'layers') && (
                 <div className="absolute right-4 top-4 bottom-20 w-80 bg-white shadow-2xl rounded-2xl z-50 flex flex-col border border-gray-200 animate-in fade-in zoom-in-95 duration-200">
@@ -618,7 +629,7 @@ export const TemplateEditor: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-5 space-y-6">
+                    <div className="flex-1 overflow-y-auto p-4 space-y-6">
                         {activeTab === 'properties' && selectedBox && (
                             <>
                                 <div className="flex justify-between items-center mb-2">
@@ -644,145 +655,149 @@ export const TemplateEditor: React.FC = () => {
                                 </div>
                                 
                                 {selectedBox.type === BoxType.TEXT && (
-                                    <div className="space-y-5 pt-4 border-t border-dashed border-gray-200">
-                                        <div className="flex gap-2 items-end">
-                                            <div className="flex-1">
-                                                <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">Font Family</label>
-                                                <select 
-                                                    className="w-full p-2 bg-white border border-gray-200 rounded text-sm outline-none focus:border-primary"
-                                                    value={selectedBox.fontFamily}
-                                                    onChange={e => updateBox(selectedBox.id, { fontFamily: e.target.value })}
+                                    <div className="space-y-3 pt-2">
+                                        {/* Typography Card */}
+                                        <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 space-y-3">
+                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Typography</label>
+                                            <div className="flex gap-2">
+                                                <div className="flex-1 min-w-0">
+                                                    <select 
+                                                        className="w-full p-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-primary truncate"
+                                                        value={selectedBox.fontFamily}
+                                                        onChange={e => updateBox(selectedBox.id, { fontFamily: e.target.value })}
+                                                    >
+                                                        {customFonts.map(f => <option key={f} value={f}>{f}</option>)}
+                                                    </select>
+                                                </div>
+                                                <label className="w-9 h-9 flex items-center justify-center bg-white border border-gray-200 rounded-lg cursor-pointer hover:border-primary text-gray-500 hover:text-primary transition-colors" title="Upload Custom Font">
+                                                    <Icons.Upload />
+                                                    <input type="file" accept=".ttf,.otf,.woff,.woff2" className="hidden" onChange={handleFontUpload} />
+                                                </label>
+                                                <button 
+                                                    onClick={() => updateBox(selectedBox.id, { fontWeight: selectedBox.fontWeight === 'bold' ? 'normal' : 'bold' })}
+                                                    className={`w-9 h-9 flex items-center justify-center border rounded-lg transition-colors ${selectedBox.fontWeight === 'bold' ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+                                                    title="Toggle Bold"
                                                 >
-                                                    {customFonts.map(f => <option key={f} value={f}>{f}</option>)}
-                                                </select>
+                                                    <Icons.Bold />
+                                                </button>
                                             </div>
-                                            <button 
-                                                onClick={() => updateBox(selectedBox.id, { fontWeight: selectedBox.fontWeight === 'bold' ? 'normal' : 'bold' })}
-                                                className={`p-2 border rounded transition-colors ${selectedBox.fontWeight === 'bold' ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
-                                                title="Toggle Bold"
-                                            >
-                                                <Icons.Bold />
-                                            </button>
-                                        </div>
-                                        
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">Font Size (px)</label>
-                                                <input type="number" min="1" value={selectedBox.fontSize} onChange={e => updateBox(selectedBox.id, { fontSize: parseInt(e.target.value) })} className="w-full p-2 bg-white border border-gray-200 rounded text-sm outline-none focus:border-primary" />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">Color</label>
-                                                <div className="flex items-center gap-2">
-                                                    <input type="text" value={selectedBox.color} onChange={e => updateBox(selectedBox.id, { color: e.target.value })} className="w-full p-2 bg-white border border-gray-200 rounded text-sm outline-none focus:border-primary font-mono uppercase" placeholder="#000000" />
-                                                    <div className="w-9 h-9 rounded border border-gray-200 shadow-sm shrink-0" style={{ backgroundColor: selectedBox.color }} />
+                                            
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <label className="text-[10px] text-gray-400 font-bold mb-1 block">Size (px)</label>
+                                                    <input type="number" min="1" value={selectedBox.fontSize} onChange={e => updateBox(selectedBox.id, { fontSize: parseInt(e.target.value) })} className="w-full p-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-primary" />
+                                                </div>
+                                                <div>
+                                                    <label className="text-[10px] text-gray-400 font-bold mb-1 block">Color</label>
+                                                    <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg p-1">
+                                                        <input type="color" value={selectedBox.color} onChange={e => updateBox(selectedBox.id, { color: e.target.value })} className="h-6 w-6 rounded border-0 p-0 cursor-pointer" />
+                                                        <input type="text" value={selectedBox.color} onChange={e => updateBox(selectedBox.id, { color: e.target.value })} className="flex-1 min-w-0 text-xs font-mono outline-none uppercase" />
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* Line Height Control Added Here */}
-                                        <div>
-                                            <div className="flex justify-between mb-1">
-                                                <label className="text-xs font-bold text-gray-500 uppercase">Line Height (Gap)</label>
-                                                <span className="text-xs text-primary font-mono">{selectedBox.lineHeight || 1.2}</span>
-                                            </div>
-                                            <input 
-                                                type="range" 
-                                                min="0.8" 
-                                                max="3.0" 
-                                                step="0.1" 
-                                                value={selectedBox.lineHeight || 1.2} 
-                                                onChange={e => updateBox(selectedBox.id, { lineHeight: parseFloat(e.target.value) })} 
-                                                className="w-full h-2 bg-gray-200 rounded-lg accent-primary" 
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">Alignment</label>
-                                            <div className="flex bg-gray-50 border border-gray-200 rounded p-1 mb-2">
-                                                {['left', 'center', 'right'].map((align) => (
-                                                    <button key={align} onClick={() => alignText(selectedBox.id, align as 'left')} className={`flex-1 py-1.5 rounded flex justify-center ${selectedBox.align === align ? 'bg-white shadow-sm text-primary' : 'text-gray-400 hover:text-gray-600'}`}>
-                                                        {align === 'left' ? <Icons.AlignLeft /> : align === 'center' ? <Icons.AlignCenter /> : <Icons.AlignRight />}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                            <div className="flex bg-gray-50 border border-gray-200 rounded p-1">
-                                                {['top', 'middle', 'bottom'].map((align) => (
-                                                    <button key={align} onClick={() => alignTextVertical(selectedBox.id, align as 'top')} className={`flex-1 py-1.5 rounded flex justify-center ${selectedBox.verticalAlign === align ? 'bg-white shadow-sm text-primary' : 'text-gray-400 hover:text-gray-600'}`}>
-                                                        {align === 'top' ? <Icons.AlignTop /> : align === 'middle' ? <Icons.AlignMiddle /> : <Icons.AlignBottom />}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        {/* STROKE SECTION */}
-                                        <div className="pt-4 border-t border-dashed border-gray-200">
-                                            <div className="flex justify-between items-center mb-2">
-                                                <label className="text-xs font-bold text-gray-700 uppercase">Text Stroke</label>
-                                                <input type="checkbox" checked={!!(selectedBox.textStrokeWidth && selectedBox.textStrokeWidth > 0)} onChange={(e) => updateBox(selectedBox.id, { textStrokeWidth: e.target.checked ? 1 : 0 })} className="w-4 h-4 accent-primary" />
-                                            </div>
-                                            {selectedBox.textStrokeWidth && selectedBox.textStrokeWidth > 0 ? (
-                                                <div className="space-y-2 bg-gray-50 p-2 rounded border border-gray-100">
-                                                    <div>
-                                                        <label className="text-[10px] font-bold text-gray-400 uppercase">Color</label>
-                                                        <div className="flex items-center gap-2">
-                                                            <input type="color" value={selectedBox.textStrokeColor || '#000000'} onChange={e => updateBox(selectedBox.id, { textStrokeColor: e.target.value })} className="h-6 w-8 p-0 border-0 rounded overflow-hidden cursor-pointer" />
-                                                            <input type="text" value={selectedBox.textStrokeColor || '#000000'} onChange={e => updateBox(selectedBox.id, { textStrokeColor: e.target.value })} className="flex-1 p-1 text-xs border rounded font-mono" />
-                                                        </div>
-                                                    </div>
-                                                    <div>
-                                                        <div className="flex justify-between mb-1">
-                                                            <label className="text-[10px] font-bold text-gray-400 uppercase">Width</label>
-                                                            <span className="text-[10px] text-gray-500">{selectedBox.textStrokeWidth}px</span>
-                                                        </div>
-                                                        <input type="range" min="1" max="20" value={selectedBox.textStrokeWidth} onChange={e => updateBox(selectedBox.id, { textStrokeWidth: parseInt(e.target.value) })} className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
-                                                    </div>
+                                        {/* Alignment Card */}
+                                        <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 space-y-3">
+                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Layout</label>
+                                            <div>
+                                                <div className="flex justify-between mb-1">
+                                                    <label className="text-[10px] font-bold text-gray-400 uppercase">Line Height</label>
+                                                    <span className="text-[10px] text-primary font-mono">{selectedBox.lineHeight || 1.2}</span>
                                                 </div>
-                                            ) : null}
+                                                <input 
+                                                    type="range" min="0.8" max="3.0" step="0.1" 
+                                                    value={selectedBox.lineHeight || 1.2} 
+                                                    onChange={e => updateBox(selectedBox.id, { lineHeight: parseFloat(e.target.value) })} 
+                                                    className="w-full h-1.5 bg-gray-200 rounded-lg accent-primary" 
+                                                />
+                                            </div>
+
+                                            <div className="grid grid-cols-1 gap-2">
+                                                <div className="flex bg-white border border-gray-200 rounded-lg p-1">
+                                                    {['left', 'center', 'right'].map((align) => (
+                                                        <button key={align} onClick={() => alignText(selectedBox.id, align as 'left')} className={`flex-1 py-1.5 rounded flex justify-center ${selectedBox.align === align ? 'bg-gray-100 text-primary font-bold' : 'text-gray-400 hover:text-gray-600'}`}>
+                                                            {align === 'left' ? <Icons.AlignLeft /> : align === 'center' ? <Icons.AlignCenter /> : <Icons.AlignRight />}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <div className="flex bg-white border border-gray-200 rounded-lg p-1">
+                                                    {['top', 'middle', 'bottom'].map((align) => (
+                                                        <button key={align} onClick={() => alignTextVertical(selectedBox.id, align as 'top')} className={`flex-1 py-1.5 rounded flex justify-center ${selectedBox.verticalAlign === align ? 'bg-gray-100 text-primary font-bold' : 'text-gray-400 hover:text-gray-600'}`}>
+                                                            {align === 'top' ? <Icons.AlignTop /> : align === 'middle' ? <Icons.AlignMiddle /> : <Icons.AlignBottom />}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
                                         </div>
 
-                                        {/* SHADOW SECTION */}
-                                        <div className="pt-4 border-t border-dashed border-gray-200">
-                                            <div className="flex justify-between items-center mb-2">
-                                                <label className="text-xs font-bold text-gray-700 uppercase">Text Shadow</label>
-                                                <input type="checkbox" checked={!!(selectedBox.textShadowOpacity && selectedBox.textShadowOpacity > 0)} onChange={(e) => updateBox(selectedBox.id, { textShadowOpacity: e.target.checked ? 0.5 : 0 })} className="w-4 h-4 accent-primary" />
-                                            </div>
-                                            {selectedBox.textShadowOpacity && selectedBox.textShadowOpacity > 0 ? (
-                                                <div className="space-y-3 bg-gray-50 p-2 rounded border border-gray-100">
-                                                     <div>
-                                                        <label className="text-[10px] font-bold text-gray-400 uppercase">Color</label>
+                                        {/* Effects Card */}
+                                        <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 space-y-3">
+                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Effects</label>
+                                            
+                                            {/* STROKE */}
+                                            <div className="bg-white p-2 rounded-lg border border-gray-200">
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <label className="text-xs font-bold text-gray-700 uppercase">Stroke</label>
+                                                    <input type="checkbox" checked={!!(selectedBox.textStrokeWidth && selectedBox.textStrokeWidth > 0)} onChange={(e) => updateBox(selectedBox.id, { textStrokeWidth: e.target.checked ? 1 : 0 })} className="w-4 h-4 accent-primary cursor-pointer" />
+                                                </div>
+                                                {selectedBox.textStrokeWidth && selectedBox.textStrokeWidth > 0 ? (
+                                                    <div className="space-y-2 pt-1 border-t border-gray-100">
                                                         <div className="flex items-center gap-2">
-                                                            <input type="color" value={selectedBox.textShadowColor || '#000000'} onChange={e => updateBox(selectedBox.id, { textShadowColor: e.target.value })} className="h-6 w-8 p-0 border-0 rounded overflow-hidden cursor-pointer" />
-                                                            <input type="text" value={selectedBox.textShadowColor || '#000000'} onChange={e => updateBox(selectedBox.id, { textShadowColor: e.target.value })} className="flex-1 p-1 text-xs border rounded font-mono" />
+                                                            <div className="flex items-center gap-2 border border-gray-200 rounded p-1 flex-1">
+                                                                <input type="color" value={selectedBox.textStrokeColor || '#000000'} onChange={e => updateBox(selectedBox.id, { textStrokeColor: e.target.value })} className="h-5 w-5 rounded border-0 p-0 cursor-pointer" />
+                                                                <span className="text-[10px] text-gray-500 font-mono">COLOR</span>
+                                                            </div>
+                                                            <div className="flex-1">
+                                                                <input type="range" min="1" max="20" value={selectedBox.textStrokeWidth} onChange={e => updateBox(selectedBox.id, { textStrokeWidth: parseInt(e.target.value) })} className="w-full h-1.5 bg-gray-200 rounded-lg accent-primary" />
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                    <div>
-                                                        <div className="flex justify-between mb-1">
-                                                            <label className="text-[10px] font-bold text-gray-400 uppercase">Opacity</label>
-                                                            <span className="text-[10px] text-gray-500">{Math.round(selectedBox.textShadowOpacity * 100)}%</span>
-                                                        </div>
-                                                        <input type="range" min="0" max="1" step="0.05" value={selectedBox.textShadowOpacity} onChange={e => updateBox(selectedBox.id, { textShadowOpacity: parseFloat(e.target.value) })} className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
-                                                    </div>
-                                                    <div>
-                                                        <div className="flex justify-between mb-1">
-                                                            <label className="text-[10px] font-bold text-gray-400 uppercase">Blur</label>
-                                                            <span className="text-[10px] text-gray-500">{selectedBox.textShadowBlur}px</span>
-                                                        </div>
-                                                        <input type="range" min="0" max="20" value={selectedBox.textShadowBlur || 0} onChange={e => updateBox(selectedBox.id, { textShadowBlur: parseInt(e.target.value) })} className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
-                                                    </div>
-                                                    <div className="grid grid-cols-2 gap-2">
-                                                        <div>
-                                                            <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">X Offset</label>
-                                                            <input type="number" value={selectedBox.textShadowOffsetX || 0} onChange={e => updateBox(selectedBox.id, { textShadowOffsetX: parseInt(e.target.value) })} className="w-full p-1 text-xs border rounded" />
+                                                ) : null}
+                                            </div>
+
+                                            {/* SHADOW */}
+                                            <div className="bg-white p-2 rounded-lg border border-gray-200">
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <label className="text-xs font-bold text-gray-700 uppercase">Shadow</label>
+                                                    <input type="checkbox" checked={!!(selectedBox.textShadowOpacity && selectedBox.textShadowOpacity > 0)} onChange={(e) => updateBox(selectedBox.id, { textShadowOpacity: e.target.checked ? 0.5 : 0 })} className="w-4 h-4 accent-primary cursor-pointer" />
+                                                </div>
+                                                {selectedBox.textShadowOpacity && selectedBox.textShadowOpacity > 0 ? (
+                                                    <div className="space-y-3 pt-2 border-t border-gray-100">
+                                                         <div className="flex items-center gap-2">
+                                                            <div className="flex items-center gap-2 border border-gray-200 rounded p-1 w-full">
+                                                                <input type="color" value={selectedBox.textShadowColor || '#000000'} onChange={e => updateBox(selectedBox.id, { textShadowColor: e.target.value })} className="h-5 w-5 rounded border-0 p-0 cursor-pointer" />
+                                                                <span className="text-[10px] text-gray-500 font-mono">COLOR</span>
+                                                            </div>
                                                         </div>
                                                         <div>
-                                                            <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Y Offset</label>
-                                                            <input type="number" value={selectedBox.textShadowOffsetY || 0} onChange={e => updateBox(selectedBox.id, { textShadowOffsetY: parseInt(e.target.value) })} className="w-full p-1 text-xs border rounded" />
+                                                            <div className="flex justify-between mb-1">
+                                                                <label className="text-[10px] font-bold text-gray-400 uppercase">Opacity</label>
+                                                                <span className="text-[10px] text-gray-500">{Math.round(selectedBox.textShadowOpacity * 100)}%</span>
+                                                            </div>
+                                                            <input type="range" min="0" max="1" step="0.05" value={selectedBox.textShadowOpacity} onChange={e => updateBox(selectedBox.id, { textShadowOpacity: parseFloat(e.target.value) })} className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
+                                                        </div>
+                                                        <div>
+                                                            <div className="flex justify-between mb-1">
+                                                                <label className="text-[10px] font-bold text-gray-400 uppercase">Blur</label>
+                                                                <span className="text-[10px] text-gray-500">{selectedBox.textShadowBlur}px</span>
+                                                            </div>
+                                                            <input type="range" min="0" max="20" value={selectedBox.textShadowBlur || 0} onChange={e => updateBox(selectedBox.id, { textShadowBlur: parseInt(e.target.value) })} className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
+                                                        </div>
+                                                        <div className="grid grid-cols-2 gap-2">
+                                                            <div>
+                                                                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">X Offset</label>
+                                                                <input type="number" value={selectedBox.textShadowOffsetX || 0} onChange={e => updateBox(selectedBox.id, { textShadowOffsetX: parseInt(e.target.value) })} className="w-full p-1 text-xs border rounded bg-gray-50 text-center" />
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Y Offset</label>
+                                                                <input type="number" value={selectedBox.textShadowOffsetY || 0} onChange={e => updateBox(selectedBox.id, { textShadowOffsetY: parseInt(e.target.value) })} className="w-full p-1 text-xs border rounded bg-gray-50 text-center" />
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            ) : null}
+                                                ) : null}
+                                            </div>
                                         </div>
-
                                     </div>
                                 )}
                                 
