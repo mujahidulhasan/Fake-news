@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { BoxConfig, BoxType, Template, Channel, Asset } from '../../types';
 import { Link, useNavigate } from 'react-router-dom';
@@ -39,6 +40,7 @@ const Icons = {
   ArrowUp: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>,
   ArrowDown: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>,
   Watermark: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>,
+  Bold: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/></svg>,
 };
 
 const fileToBase64 = (file: File): Promise<string> => {
@@ -257,12 +259,21 @@ export const TemplateEditor: React.FC = () => {
       color: '#000000',
       fontSize: 24,
       fontFamily: 'Hind Siliguri',
+      fontWeight: 'normal',
       align: 'left',
       verticalAlign: 'top',
       fitMode: 'cover',
       locked: false,
       opacity: type === BoxType.WATERMARK ? 0.3 : 1, // Default lower opacity for watermark
-      lineHeight: 1.2
+      lineHeight: 1.2,
+      // Advanced Text Init
+      textStrokeWidth: 0,
+      textStrokeColor: '#000000',
+      textShadowBlur: 0,
+      textShadowColor: '#000000',
+      textShadowOffsetX: 2,
+      textShadowOffsetY: 2,
+      textShadowOpacity: 0
     };
     if (type === BoxType.IMAGE) { newBox.w = 30; newBox.h = 30; }
     if (type === BoxType.LOGO || type === BoxType.ADS || type === BoxType.WATERMARK) { newBox.w = 15; newBox.h = 15; newBox.fitMode = 'contain'; }
@@ -327,18 +338,18 @@ export const TemplateEditor: React.FC = () => {
     dragRef.current = {
       id, mode, startX: coords.x, startY: coords.y,
       startXVal: mode === 'drag' ? box.x : box.w,
-      startYVal: mode === 'drag' ? box.h : box.h, // Bug fix: previously used box.h for startYVal in drag mode? No wait.
-      // Correction:
-      // startXVal: mode === 'drag' ? box.x : box.w,
-      // startYVal: mode === 'drag' ? box.y : box.h,
-    };
-    // Re-assign correctly for drag vs resize logic:
-    dragRef.current = {
-      id, mode, startX: coords.x, startY: coords.y,
-      startXVal: mode === 'drag' ? box.x : box.w,
-      startYVal: mode === 'drag' ? box.y : box.h,
+      startYVal: mode === 'drag' ? box.y : box.h, // Using y for height logic? No, wait.
       containerW: rect.width, containerH: rect.height
     };
+    
+    // Correction for drag vs resize logic confusion in original code
+    if (mode === 'drag') {
+         dragRef.current.startXVal = box.x;
+         dragRef.current.startYVal = box.y;
+    } else {
+         dragRef.current.startXVal = box.w;
+         dragRef.current.startYVal = box.h;
+    }
 
     setSelectedBoxId(id);
     setHitBoundary(false);
@@ -554,12 +565,16 @@ export const TemplateEditor: React.FC = () => {
                                      <span 
                                         style={{ 
                                             fontFamily: box.fontFamily, 
+                                            fontWeight: box.fontWeight,
                                             color: box.color, 
                                             fontSize: '100%', 
                                             whiteSpace: 'nowrap',
                                             textAlign: box.align || 'left',
                                             width: '100%',
-                                            lineHeight: box.lineHeight || 1.2
+                                            lineHeight: box.lineHeight || 1.2,
+                                            // Simple preview for editor (real render is canvas)
+                                            textShadow: box.textShadowOpacity && box.textShadowOpacity > 0 ? `${box.textShadowOffsetX}px ${box.textShadowOffsetY}px ${box.textShadowBlur}px ${box.textShadowColor}` : 'none',
+                                            WebkitTextStroke: (box.textStrokeWidth && box.textStrokeWidth > 0) ? `${Math.min(box.textStrokeWidth * 0.5, 2)}px ${box.textStrokeColor}` : 'none'
                                         }} 
                                         className="text-xs md:text-sm px-1"
                                     >
@@ -630,23 +645,26 @@ export const TemplateEditor: React.FC = () => {
                                 
                                 {selectedBox.type === BoxType.TEXT && (
                                     <div className="space-y-5 pt-4 border-t border-dashed border-gray-200">
-                                        <div>
-                                            <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">Font Family</label>
-                                            <div className="flex gap-2">
+                                        <div className="flex gap-2 items-end">
+                                            <div className="flex-1">
+                                                <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">Font Family</label>
                                                 <select 
-                                                    className="flex-1 p-2 bg-white border border-gray-200 rounded text-sm outline-none focus:border-primary"
+                                                    className="w-full p-2 bg-white border border-gray-200 rounded text-sm outline-none focus:border-primary"
                                                     value={selectedBox.fontFamily}
                                                     onChange={e => updateBox(selectedBox.id, { fontFamily: e.target.value })}
                                                 >
                                                     {customFonts.map(f => <option key={f} value={f}>{f}</option>)}
                                                 </select>
-                                                <label className="p-2 bg-gray-100 border border-gray-200 rounded cursor-pointer hover:bg-gray-200 text-gray-600 flex items-center justify-center w-10 shrink-0">
-                                                    <Icons.Upload />
-                                                    <input type="file" accept=".ttf,.otf,.woff,.woff2" className="hidden" onChange={handleFontUpload} />
-                                                </label>
                                             </div>
+                                            <button 
+                                                onClick={() => updateBox(selectedBox.id, { fontWeight: selectedBox.fontWeight === 'bold' ? 'normal' : 'bold' })}
+                                                className={`p-2 border rounded transition-colors ${selectedBox.fontWeight === 'bold' ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+                                                title="Toggle Bold"
+                                            >
+                                                <Icons.Bold />
+                                            </button>
                                         </div>
-
+                                        
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
                                                 <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">Font Size (px)</label>
@@ -695,6 +713,76 @@ export const TemplateEditor: React.FC = () => {
                                                 ))}
                                             </div>
                                         </div>
+
+                                        {/* STROKE SECTION */}
+                                        <div className="pt-4 border-t border-dashed border-gray-200">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <label className="text-xs font-bold text-gray-700 uppercase">Text Stroke</label>
+                                                <input type="checkbox" checked={!!(selectedBox.textStrokeWidth && selectedBox.textStrokeWidth > 0)} onChange={(e) => updateBox(selectedBox.id, { textStrokeWidth: e.target.checked ? 1 : 0 })} className="w-4 h-4 accent-primary" />
+                                            </div>
+                                            {selectedBox.textStrokeWidth && selectedBox.textStrokeWidth > 0 ? (
+                                                <div className="space-y-2 bg-gray-50 p-2 rounded border border-gray-100">
+                                                    <div>
+                                                        <label className="text-[10px] font-bold text-gray-400 uppercase">Color</label>
+                                                        <div className="flex items-center gap-2">
+                                                            <input type="color" value={selectedBox.textStrokeColor || '#000000'} onChange={e => updateBox(selectedBox.id, { textStrokeColor: e.target.value })} className="h-6 w-8 p-0 border-0 rounded overflow-hidden cursor-pointer" />
+                                                            <input type="text" value={selectedBox.textStrokeColor || '#000000'} onChange={e => updateBox(selectedBox.id, { textStrokeColor: e.target.value })} className="flex-1 p-1 text-xs border rounded font-mono" />
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="flex justify-between mb-1">
+                                                            <label className="text-[10px] font-bold text-gray-400 uppercase">Width</label>
+                                                            <span className="text-[10px] text-gray-500">{selectedBox.textStrokeWidth}px</span>
+                                                        </div>
+                                                        <input type="range" min="1" max="20" value={selectedBox.textStrokeWidth} onChange={e => updateBox(selectedBox.id, { textStrokeWidth: parseInt(e.target.value) })} className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
+                                                    </div>
+                                                </div>
+                                            ) : null}
+                                        </div>
+
+                                        {/* SHADOW SECTION */}
+                                        <div className="pt-4 border-t border-dashed border-gray-200">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <label className="text-xs font-bold text-gray-700 uppercase">Text Shadow</label>
+                                                <input type="checkbox" checked={!!(selectedBox.textShadowOpacity && selectedBox.textShadowOpacity > 0)} onChange={(e) => updateBox(selectedBox.id, { textShadowOpacity: e.target.checked ? 0.5 : 0 })} className="w-4 h-4 accent-primary" />
+                                            </div>
+                                            {selectedBox.textShadowOpacity && selectedBox.textShadowOpacity > 0 ? (
+                                                <div className="space-y-3 bg-gray-50 p-2 rounded border border-gray-100">
+                                                     <div>
+                                                        <label className="text-[10px] font-bold text-gray-400 uppercase">Color</label>
+                                                        <div className="flex items-center gap-2">
+                                                            <input type="color" value={selectedBox.textShadowColor || '#000000'} onChange={e => updateBox(selectedBox.id, { textShadowColor: e.target.value })} className="h-6 w-8 p-0 border-0 rounded overflow-hidden cursor-pointer" />
+                                                            <input type="text" value={selectedBox.textShadowColor || '#000000'} onChange={e => updateBox(selectedBox.id, { textShadowColor: e.target.value })} className="flex-1 p-1 text-xs border rounded font-mono" />
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="flex justify-between mb-1">
+                                                            <label className="text-[10px] font-bold text-gray-400 uppercase">Opacity</label>
+                                                            <span className="text-[10px] text-gray-500">{Math.round(selectedBox.textShadowOpacity * 100)}%</span>
+                                                        </div>
+                                                        <input type="range" min="0" max="1" step="0.05" value={selectedBox.textShadowOpacity} onChange={e => updateBox(selectedBox.id, { textShadowOpacity: parseFloat(e.target.value) })} className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
+                                                    </div>
+                                                    <div>
+                                                        <div className="flex justify-between mb-1">
+                                                            <label className="text-[10px] font-bold text-gray-400 uppercase">Blur</label>
+                                                            <span className="text-[10px] text-gray-500">{selectedBox.textShadowBlur}px</span>
+                                                        </div>
+                                                        <input type="range" min="0" max="20" value={selectedBox.textShadowBlur || 0} onChange={e => updateBox(selectedBox.id, { textShadowBlur: parseInt(e.target.value) })} className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
+                                                    </div>
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        <div>
+                                                            <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">X Offset</label>
+                                                            <input type="number" value={selectedBox.textShadowOffsetX || 0} onChange={e => updateBox(selectedBox.id, { textShadowOffsetX: parseInt(e.target.value) })} className="w-full p-1 text-xs border rounded" />
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Y Offset</label>
+                                                            <input type="number" value={selectedBox.textShadowOffsetY || 0} onChange={e => updateBox(selectedBox.id, { textShadowOffsetY: parseInt(e.target.value) })} className="w-full p-1 text-xs border rounded" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ) : null}
+                                        </div>
+
                                     </div>
                                 )}
                                 

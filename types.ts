@@ -1,3 +1,4 @@
+
 export enum BoxType {
   TEXT = 'TEXT',
   IMAGE = 'IMAGE', // User uploaded photo
@@ -21,12 +22,22 @@ export interface BoxConfig {
   // Text specific
   fontFamily?: string;
   fontSize?: number; // Base size, might need scaling
-  fontWeight?: string;
+  fontWeight?: string; // 'bold' | 'normal'
   color?: string;
   lineHeight?: number; // Multiplier (e.g., 1.2)
   align?: 'left' | 'center' | 'right'; // Horizontal Text alignment
   verticalAlign?: 'top' | 'middle' | 'bottom'; // Vertical Text alignment
   
+  // Advanced Text Styling
+  textStrokeColor?: string;
+  textStrokeWidth?: number; // 0 to disable
+  
+  textShadowColor?: string;
+  textShadowBlur?: number;
+  textShadowOffsetX?: number;
+  textShadowOffsetY?: number;
+  textShadowOpacity?: number; // 0-1
+
   // Image specific
   fitMode?: 'cover' | 'contain' | 'fill';
   opacity?: number;

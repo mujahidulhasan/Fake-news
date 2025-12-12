@@ -1,3 +1,4 @@
+
 import { BoxConfig, BoxType, Template, UserFormData } from '../types';
 
 export const renderCard = async (
@@ -84,9 +85,28 @@ const drawBox = async (
     if (textValue) {
         // Font setup
         const fontSize = (box.fontSize || 24) * (canvasW / 1000); 
-        ctx.font = `${box.fontWeight || 'normal'} ${fontSize}px ${box.fontFamily || 'Hind Siliguri'}`;
+        const fontWeight = box.fontWeight || 'normal';
+        ctx.font = `${fontWeight} ${fontSize}px ${box.fontFamily || 'Hind Siliguri'}`;
         ctx.fillStyle = box.color || '#000000';
         
+        // Shadow Setup
+        if (box.textShadowColor && box.textShadowOpacity && box.textShadowOpacity > 0) {
+            ctx.shadowColor = hexToRgba(box.textShadowColor, box.textShadowOpacity);
+            ctx.shadowBlur = (box.textShadowBlur || 0); // Scale blur? Usually keeping it raw is fine or scale slightly
+            ctx.shadowOffsetX = (box.textShadowOffsetX || 0);
+            ctx.shadowOffsetY = (box.textShadowOffsetY || 0);
+        }
+
+        // Stroke Setup
+        const hasStroke = box.textStrokeWidth && box.textStrokeWidth > 0 && box.textStrokeColor;
+        if (hasStroke) {
+            ctx.lineWidth = (box.textStrokeWidth || 0) * (canvasW / 1000) * 0.1; // Scale factor adjustment usually needed for stroke width
+            if (ctx.lineWidth < 1 && (box.textStrokeWidth || 0) > 0) ctx.lineWidth = 1; // Minimum visible
+            ctx.strokeStyle = box.textStrokeColor || '#000000';
+            ctx.lineJoin = 'round';
+            ctx.miterLimit = 2;
+        }
+
         // Horizontal Alignment Calculation
         let drawX = x;
         if (box.align === 'center') {
@@ -154,7 +174,13 @@ const drawBox = async (
         }
 
         allLines.forEach((l, i) => {
-            ctx.fillText(l, drawX, startY + blockOffset + (i * lineHeight));
+            const dy = startY + blockOffset + (i * lineHeight);
+            // Draw Stroke First (behind fill)
+            if (hasStroke) {
+                ctx.strokeText(l, drawX, dy);
+            }
+            // Draw Fill
+            ctx.fillText(l, drawX, dy);
         });
     }
 
@@ -225,3 +251,16 @@ const loadImage = (src: string): Promise<HTMLImageElement> => {
         img.src = src;
     });
 };
+
+const hexToRgba = (hex: string, alpha: number) => {
+    let c: any;
+    if(/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)){
+        c= hex.substring(1).split('');
+        if(c.length== 3){
+            c= [c[0], c[0], c[1], c[1], c[2], c[2]];
+        }
+        c= '0x'+c.join('');
+        return 'rgba('+[(c>>16)&255, (c>>8)&255, c&255].join(',')+','+alpha+')';
+    }
+    return hex; // Fallback
+}
